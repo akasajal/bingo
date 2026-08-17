@@ -1,5 +1,6 @@
 package com.ishaan.bingo.data.repository
 
+import com.google.firebase.auth.FirebaseAuth
 import com.ishaan.bingo.data.remote.FirebaseGameDataSource
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameRoom
@@ -9,13 +10,23 @@ import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.game.BingoGameEngine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
 class GameRepositoryImpl(
     private val dataSource: FirebaseGameDataSource,
     private val gameEngine: BingoGameEngine = BingoGameEngine(),
-    override val playerId: String = UUID.randomUUID().toString() // Simple persistent-ish ID for session
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : GameRepository {
+
+    override val playerId: String
+        get() = auth.currentUser?.uid ?: ""
+
+    private suspend fun ensureAuthenticated() {
+        if (auth.currentUser == null) {
+            auth.signInAnonymously().await()
+        }
+    }
 
     override fun getGameRoom(roomId: String): Flow<GameRoom?> = dataSource.getGameRoom(roomId)
 
@@ -34,15 +45,22 @@ class GameRepositoryImpl(
     }
 
     override suspend fun createRoom(): Result<GameRoom> = runCatching {
-        dataSource.createRoom()
+        ensureAuthenticated()
+        val room = dataSource.createRoom()
+        val creator = Player(id = playerId, name = "Player 1")
+        val updatedRoom = room.copy(players = mapOf(playerId to creator))
+        dataSource.updateRoom(updatedRoom)
+        updatedRoom
     }
 
     override suspend fun joinRoom(code: String): Result<GameRoom> = runCatching {
-        val player = Player(id = playerId, name = "Player 2") // Simplified
+        ensureAuthenticated()
+        val player = Player(id = playerId, name = "Player 2")
         dataSource.joinRoom(code, player)
     }
 
     override suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit> = runCatching {
+        ensureAuthenticated()
         dataSource.updateBoard(roomId, playerId, board)
         val room = dataSource.getGameRoom(roomId).first() ?: throw Exception("Room not found")
         val updatedPlayers = room.players.toMutableMap()
@@ -67,6 +85,7 @@ class GameRepositoryImpl(
     }
 
     override suspend fun callNumber(roomId: String, number: Int): Result<Unit> = runCatching {
+        ensureAuthenticated()
         val room = dataSource.getGameRoom(roomId).first() ?: throw Exception("Room not found")
         
         // We need all boards to process the call (authoritative)

@@ -22,8 +22,40 @@ fun LobbyScreen(
     val uiState by viewModel.uiState.collectAsState()
     var joinCode by remember { mutableStateOf("") }
 
-    LaunchedEffect(uiState.joinedRoomId) {
-        uiState.joinedRoomId?.let { onGameJoined(it) }
+    LaunchedEffect(uiState.shouldNavigateToSetup, uiState.joinedRoomId) {
+        if (uiState.shouldNavigateToSetup) {
+            uiState.joinedRoomId?.let { onGameJoined(it) }
+        }
+    }
+
+    if (uiState.gameCode.isNotBlank() && !uiState.shouldNavigateToSetup) {
+        AlertDialog(
+            onDismissRequest = { /* Prevent dismissal */ },
+            title = { Text("Game Created!", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Share this code with your friend:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            text = uiState.gameCode,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Waiting for opponent...", style = MaterialTheme.typography.labelMedium)
+                }
+            },
+            confirmButton = {} // Waiting...
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

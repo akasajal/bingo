@@ -69,20 +69,32 @@ fun GameScreen(
         
         // Turn Indicator Card
         val isMyTurn = room?.currentTurnPlayerId == viewModel.repository.playerId
+        val isPlaying = room?.status == GameStatus.PLAYING
+        
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = if (isMyTurn) MaterialTheme.colorScheme.primaryContainer 
-                                else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = when {
+                    !isPlaying -> MaterialTheme.colorScheme.surfaceVariant
+                    isMyTurn -> MaterialTheme.colorScheme.primaryContainer 
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
             ),
             shape = MaterialTheme.shapes.medium
         ) {
             Text(
-                text = if (isMyTurn) "⚡ YOUR TURN" else "⌛ OPPONENT'S TURN",
+                text = when {
+                    !isPlaying -> "⌛ WAITING FOR OPPONENT..."
+                    isMyTurn -> "⚡ YOUR TURN"
+                    else -> "⌛ OPPONENT'S TURN"
+                },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isMyTurn) MaterialTheme.colorScheme.onPrimaryContainer 
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                color = when {
+                    !isPlaying -> MaterialTheme.colorScheme.onSurfaceVariant
+                    isMyTurn -> MaterialTheme.colorScheme.onPrimaryContainer 
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
         }
 

@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    // alias(libs.plugins.googleServices) // Commented out for Mock Mode
+    alias(libs.plugins.googleServices)
 }
 
 android {
@@ -48,6 +48,7 @@ dependencies {
     implementation(libs.androidx.compose.icons.extended)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.auth.ktx)
     implementation(libs.kotlinxCoroutinesPlayServices)
 
     testImplementation(libs.junit)

@@ -15,9 +15,9 @@ import com.ishaan.bingo.ui.screens.result.ResultViewModel
 import com.ishaan.bingo.data.repository.LocalPresetRepository
 
 object AppViewModelProvider {
-    // Switch to LocalGameRepository for immediate testing without Firebase setup
-    val repository = com.ishaan.bingo.data.repository.LocalGameRepository()
-    // val repository = GameRepositoryImpl(FirebaseGameDataSource())
+    // Switch to GameRepositoryImpl for actual 1v1 multiplayer
+    val repository = GameRepositoryImpl(FirebaseGameDataSource())
+    // val repository = com.ishaan.bingo.data.repository.LocalGameRepository()
     val settingsViewModel = SettingsViewModel()
     val presetRepository = LocalPresetRepository()
 
