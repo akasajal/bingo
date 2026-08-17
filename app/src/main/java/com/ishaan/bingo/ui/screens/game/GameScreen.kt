@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -174,14 +177,96 @@ fun GameScreen(
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(text = "CALL HISTORY", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
+                
+                val history = room?.calledNumbers?.reversed() ?: emptyList()
+                val historyText = buildAnnotatedString {
+                    history.forEachIndexed { index, number ->
+                        val callerId = room?.callerMap?.get(number.toString())
+                        val isMe = callerId == viewModel.repository.playerId
+                        
+                        if (isMe) {
+                            withStyle(style = SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                            )) {
+                                append(number.toString())
+                            }
+                        } else {
+                            withStyle(style = SpanStyle(
+                                color = MaterialTheme.colorScheme.outline,
+                                fontWeight = FontWeight.Normal,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )) {
+                                append(number.toString())
+                            }
+                        }
+                        
+                        if (index < history.size - 1) {
+                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))) {
+                                append("  ·  ")
+                            }
+                        }
+                    }
+                    if (history.isEmpty()) {
+                        append("No numbers called yet")
+                    }
+                }
+
                 Text(
-                    text = room?.calledNumbers?.reversed()?.joinToString("  ·  ") ?: "No numbers called yet",
+                    text = historyText,
                     style = MaterialTheme.typography.bodyMedium,
                     minLines = 2,
                     maxLines = 2
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Color Legend
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LegendItem(
+                color = MaterialTheme.colorScheme.primary, 
+                label = "My Calls",
+                isMe = true
+            )
+            Spacer(modifier = Modifier.width(24.dp))
+            LegendItem(
+                color = MaterialTheme.colorScheme.outline, 
+                label = "Opponent Calls",
+                isMe = false
+            )
+        }
+    }
+}
+
+@Composable
+fun LegendItem(color: Color, label: String, isMe: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(color, MaterialTheme.shapes.extraSmall)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = buildAnnotatedString {
+                withStyle(style = SpanStyle(
+                    fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
+                    fontStyle = if (isMe) androidx.compose.ui.text.font.FontStyle.Normal else androidx.compose.ui.text.font.FontStyle.Italic,
+                    textDecoration = if (isMe) androidx.compose.ui.text.style.TextDecoration.Underline else null
+                )) {
+                    append(label)
+                }
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

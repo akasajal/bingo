@@ -7,5 +7,6 @@ data class GameRoom(
     val players: Map<String, Player> = emptyMap(),
     val currentTurnPlayerId: String = "",
     val calledNumbers: List<Int> = emptyList(),
+    val callerMap: Map<String, String> = emptyMap(), // Key: "number", Value: playerId
     val winnerPlayerId: String? = null
 )

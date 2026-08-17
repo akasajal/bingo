@@ -21,6 +21,8 @@ class BingoGameEngine(
         if (gameRoom.calledNumbers.contains(calledNumber)) return gameRoom
 
         val newCalledNumbers = gameRoom.calledNumbers + calledNumber
+        val newCallerMap = gameRoom.callerMap + (calledNumber.toString() to gameRoom.currentTurnPlayerId)
+        
         val updatedPlayers = gameRoom.players.mapValues { (playerId, player) ->
             val board = playerBoards[playerId] ?: return@mapValues player
             val currentCompletedLines = player.completedLines
@@ -50,6 +52,7 @@ class BingoGameEngine(
         return gameRoom.copy(
             players = updatedPlayers,
             calledNumbers = newCalledNumbers,
+            callerMap = newCallerMap,
             status = newStatus,
             winnerPlayerId = winnerId,
             currentTurnPlayerId = nextTurnPlayerId
