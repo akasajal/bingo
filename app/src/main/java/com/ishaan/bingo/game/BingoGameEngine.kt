@@ -22,14 +22,14 @@ class BingoGameEngine(
 
         val newCalledNumbers = gameRoom.calledNumbers + calledNumber
         val newCallerMap = gameRoom.callerMap + (calledNumber.toString() to gameRoom.currentTurnPlayerId)
-        
+
         val updatedPlayers = gameRoom.players.mapValues { (playerId, player) ->
             val board = playerBoards[playerId] ?: return@mapValues player
             val currentCompletedLines = player.completedLines.toSet()
             val newlyCompletedLines = lineDetector.detectCompletedLines(board.numbers, newCalledNumbers.toSet())
-            
+
             val freshLines = newlyCompletedLines - currentCompletedLines
-            
+
             // Rule: Award ONE letter for EACH newly completed line
             val newProgress = (player.bingoProgress + freshLines.size).coerceAtMost(5)
 
@@ -41,7 +41,7 @@ class BingoGameEngine(
 
         val winnerId = updatedPlayers.entries.find { it.value.bingoProgress >= 5 }?.key
         val newStatus = if (winnerId != null) GameStatus.FINISHED else GameStatus.PLAYING
-        
+
         // Switch turn
         val playerIds = updatedPlayers.keys.toList()
         val nextTurnPlayerId = if (winnerId != null) "" else {

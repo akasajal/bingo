@@ -24,13 +24,14 @@ class FirebaseGameDataSource(
         }
     }
 
-    suspend fun createRoom(): GameRoom {
+    suspend fun createRoom(creatorPlayer: Player): GameRoom {
         val roomId = UUID.randomUUID().toString()
         val code = (1..5).map { (('A'..'Z') + ('0'..'9')).random() }.joinToString("")
         val room = GameRoom(
             id = roomId,
             code = code,
-            status = GameStatus.WAITING_FOR_PLAYER
+            status = GameStatus.WAITING_FOR_PLAYER,
+            players = mapOf(creatorPlayer.id to creatorPlayer)
         )
         roomsCollection.document(roomId).set(room).await()
         return room

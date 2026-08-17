@@ -40,42 +40,42 @@ fun GameScreen(
     val room = uiState.gameRoom
     val board = uiState.playerBoard
     val myPlayer = room?.players?.get(viewModel.repository.playerId)
-    
+
     val context = LocalContext.current
     val hapticManager = remember { HapticManager(context) }
-    
+
     // For double-tap confirmation
     var selectedNumber by remember { mutableStateOf<Int?>(null) }
-    
+
     LaunchedEffect(room?.status, room?.winnerPlayerId) {
         if (room?.status == GameStatus.FINISHED && room.winnerPlayerId != null) {
             onGameFinished(room.winnerPlayerId)
         }
     }
-    
+
     // Clear selection if turn ends or number is called
     LaunchedEffect(room?.currentTurnPlayerId, room?.calledNumbers) {
         selectedNumber = null
     }
-    
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // BINGO Progress Header
         BingoHeader(progress = myPlayer?.bingoProgress ?: 0)
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         // Turn Indicator Card
         val isMyTurn = room?.currentTurnPlayerId == viewModel.repository.playerId
         val isPlaying = room?.status == GameStatus.PLAYING
-        
+
         Card(
             colors = CardDefaults.cardColors(
                 containerColor = when {
                     !isPlaying -> MaterialTheme.colorScheme.surfaceVariant
-                    isMyTurn -> MaterialTheme.colorScheme.primaryContainer 
+                    isMyTurn -> MaterialTheme.colorScheme.primaryContainer
                     else -> MaterialTheme.colorScheme.surfaceVariant
                 }
             ),
@@ -92,7 +92,7 @@ fun GameScreen(
                 fontWeight = FontWeight.Bold,
                 color = when {
                     !isPlaying -> MaterialTheme.colorScheme.onSurfaceVariant
-                    isMyTurn -> MaterialTheme.colorScheme.onPrimaryContainer 
+                    isMyTurn -> MaterialTheme.colorScheme.onPrimaryContainer
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
             )
@@ -120,7 +120,7 @@ fun GameScreen(
                         val number = board?.numbers?.get(index)
                         val isCalled = number != null && room?.calledNumbers?.contains(number) == true
                         val isSelected = number != null && selectedNumber == number
-                        
+
                         Box(
                             modifier = Modifier
                                 .aspectRatio(1f)
@@ -134,8 +134,8 @@ fun GameScreen(
                                 )
                                 .border(
                                     width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.secondary 
-                                            else MaterialTheme.colorScheme.outlineVariant,
+                                    color = if (isSelected) MaterialTheme.colorScheme.secondary
+                                    else MaterialTheme.colorScheme.outlineVariant,
                                     shape = MaterialTheme.shapes.small
                                 )
                                 .clickable(enabled = isMyTurn && !isCalled && number != null) {
@@ -161,7 +161,7 @@ fun GameScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                                     color = if (isCalled) MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurface
+                                    else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -189,13 +189,13 @@ fun GameScreen(
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(text = "CALL HISTORY", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 val history = room?.calledNumbers?.reversed() ?: emptyList()
                 val historyText = buildAnnotatedString {
                     history.forEachIndexed { index, number ->
                         val callerId = room?.callerMap?.get(number.toString())
                         val isMe = callerId == viewModel.repository.playerId
-                        
+
                         if (isMe) {
                             withStyle(style = SpanStyle(
                                 color = MaterialTheme.colorScheme.primary,
@@ -213,7 +213,7 @@ fun GameScreen(
                                 append(number.toString())
                             }
                         }
-                        
+
                         if (index < history.size - 1) {
                             withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))) {
                                 append("  ·  ")
@@ -234,6 +234,15 @@ fun GameScreen(
             }
         }
 
+        uiState.error?.let { err ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Error: $err",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Color Legend
@@ -243,13 +252,13 @@ fun GameScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             LegendItem(
-                color = MaterialTheme.colorScheme.primary, 
+                color = MaterialTheme.colorScheme.primary,
                 label = "My Calls",
                 isMe = true
             )
             Spacer(modifier = Modifier.width(24.dp))
             LegendItem(
-                color = MaterialTheme.colorScheme.outline, 
+                color = MaterialTheme.colorScheme.outline,
                 label = "Opponent Calls",
                 isMe = false
             )
@@ -291,10 +300,10 @@ fun BingoHeader(progress: Int) {
     ) {
         letters.forEachIndexed { index, letter ->
             val active = index < progress
-            val containerColor = if (active) MaterialTheme.bingoColors.success 
-                                else MaterialTheme.colorScheme.surface
-            val contentColor = if (active) MaterialTheme.colorScheme.onPrimary 
-                              else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+            val containerColor = if (active) MaterialTheme.bingoColors.success
+            else MaterialTheme.colorScheme.surface
+            val contentColor = if (active) MaterialTheme.colorScheme.onPrimary
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
 
             Surface(
                 shape = MaterialTheme.shapes.medium,
