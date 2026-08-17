@@ -10,14 +10,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.domain.model.ThemeMode
 import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
+import com.ishaan.bingo.ui.theme.HapticManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +33,11 @@ fun SettingsScreen(
 ) {
     val themeMode by viewModel.themeMode.collectAsState()
     val confirmCalls by viewModel.confirmCalls.collectAsState()
+    val hapticsEnabled by viewModel.hapticsEnabled.collectAsState()
     val presets by presetViewModel.presets.collectAsState()
+    
+    val context = LocalContext.current
+    val hapticManager = remember { HapticManager(context) }
 
     Scaffold(
         topBar = {
@@ -105,42 +112,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            // GAMEPLAY
-            Text(
-                text = "GAMEPLAY",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Confirm Calls",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Requires a double-tap to call a number during gameplay.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = confirmCalls,
-                    onCheckedChange = { viewModel.setConfirmCalls(it) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // PRESETS
+            // PRESET BOARDS
             Text(
                 text = "PRESET BOARDS",
                 style = MaterialTheme.typography.labelLarge,
@@ -183,6 +155,69 @@ fun SettingsScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // GAMEPLAY
+            Text(
+                text = "GAMEPLAY",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Confirm Calls",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Requires a double-tap to call a number during gameplay.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = confirmCalls,
+                    onCheckedChange = { viewModel.setConfirmCalls(it) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Haptic Feedback",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Vibrations when interacting with the game board.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = hapticsEnabled,
+                    onCheckedChange = { 
+                        viewModel.setHapticsEnabled(it)
+                        if (it) hapticManager.performTick()
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.weight(1f))

@@ -15,12 +15,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.ui.components.MiniBingoGrid
 import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
 import com.ishaan.bingo.ui.theme.bingoColors
+import com.ishaan.bingo.ui.theme.HapticManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,13 +30,17 @@ fun BoardSetupScreen(
     roomId: String,
     onStartGame: () -> Unit,
     viewModel: BoardSetupViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
-    presetViewModel: PresetViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
+    presetViewModel: PresetViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
+    settingsViewModel: com.ishaan.bingo.ui.screens.settings.SettingsViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val presets by presetViewModel.presets.collectAsState()
+    val hapticsEnabled by settingsViewModel.hapticsEnabled.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showPresetSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
+    val hapticManager = remember { HapticManager(context) }
 
     if (showPresetSheet) {
         ModalBottomSheet(
@@ -168,6 +174,7 @@ fun BoardSetupScreen(
                         )
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
                         .clickable { 
+                            if (hapticsEnabled) hapticManager.performTick()
                             if (number == null) {
                                 viewModel.onCellClick(index)
                             } else if (index == uiState.history.lastOrNull()) {
@@ -196,7 +203,10 @@ fun BoardSetupScreen(
         ) {
             // Randomize
             Surface(
-                onClick = { viewModel.randomize() },
+                onClick = { 
+                    if (hapticsEnabled) hapticManager.performTick()
+                    viewModel.randomize() 
+                },
                 modifier = Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 shape = MaterialTheme.shapes.medium
@@ -276,7 +286,10 @@ fun BoardSetupScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(
-                onClick = { viewModel.undo() }, 
+                onClick = { 
+                    if (hapticsEnabled) hapticManager.performTick()
+                    viewModel.undo() 
+                }, 
                 enabled = uiState.history.isNotEmpty(),
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.medium,

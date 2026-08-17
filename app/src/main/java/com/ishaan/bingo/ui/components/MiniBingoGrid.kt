@@ -18,15 +18,15 @@ import com.ishaan.bingo.ui.theme.bingoColors
 fun MiniBingoGrid(board: BingoBoard) {
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(1.dp)
+        verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
         repeat(5) { rowIndex ->
             Row(
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                horizontalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 repeat(5) { colIndex ->
-                    val index = rowIndex * 5 + colIndex
+                    val index = (rowIndex * 5) + colIndex
                     val number = board.numbers[index]
                     Box(
                         modifier = Modifier
@@ -34,16 +34,16 @@ fun MiniBingoGrid(board: BingoBoard) {
                             .fillMaxHeight()
                             .background(
                                 color = MaterialTheme.bingoColors.cell,
-                                shape = RoundedCornerShape(1.dp)
+                                shape = RoundedCornerShape(1.dp),
                             ),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
-                        if (number != null) {
+                        number?.let { n ->
                             Text(
-                                text = number.toString(),
+                                text = n.toString(),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.ExtraBold
+                                fontWeight = FontWeight.ExtraBold,
                             )
                         }
                     }

@@ -12,11 +12,18 @@ class SettingsViewModel : ViewModel() {
     private val _confirmCalls = MutableStateFlow(false)
     val confirmCalls = _confirmCalls.asStateFlow()
 
+    private val _hapticsEnabled = MutableStateFlow(false)
+    val hapticsEnabled = _hapticsEnabled.asStateFlow()
+
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
     }
 
     fun setConfirmCalls(enabled: Boolean) {
         _confirmCalls.value = enabled
+    }
+
+    fun setHapticsEnabled(enabled: Boolean) {
+        _hapticsEnabled.value = enabled
     }
 }

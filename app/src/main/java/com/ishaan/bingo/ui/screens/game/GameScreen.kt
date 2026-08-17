@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,6 +22,7 @@ import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.components.BingoGridOverlay
 import com.ishaan.bingo.ui.theme.bingoColors
 import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
+import com.ishaan.bingo.ui.theme.HapticManager
 
 @Composable
 fun GameScreen(
@@ -31,9 +33,13 @@ fun GameScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val confirmCalls by settingsViewModel.confirmCalls.collectAsState()
+    val hapticsEnabled by settingsViewModel.hapticsEnabled.collectAsState()
     val room = uiState.gameRoom
     val board = uiState.playerBoard
     val myPlayer = room?.players?.get(viewModel.repository.playerId)
+    
+    val context = LocalContext.current
+    val hapticManager = remember { HapticManager(context) }
     
     // For double-tap confirmation
     var selectedNumber by remember { mutableStateOf<Int?>(null) }
@@ -119,6 +125,7 @@ fun GameScreen(
                                 )
                                 .clickable(enabled = isMyTurn && !isCalled && number != null) {
                                     number?.let { n ->
+                                        if (hapticsEnabled) hapticManager.performTick()
                                         if (!confirmCalls) {
                                             viewModel.callNumber(n)
                                         } else {
