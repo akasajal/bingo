@@ -147,7 +147,7 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
             Text(
                 text = "HOW TO PLAY",
@@ -193,7 +193,7 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
                 text = "ABOUT",
