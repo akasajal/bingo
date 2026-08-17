@@ -28,8 +28,10 @@ class LobbyViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.createRoom().onSuccess { room ->
+                // Store the room ID and show the waiting dialog, then watch for
+                // the opponent to join (which flips status to BOARD_SETUP).
                 _uiState.update { it.copy(isLoading = false, joinedRoomId = room.id, gameCode = room.code) }
-                observeRoom(room.id)
+                observeRoomForCreator(room.id)
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, error = error.message) }
             }
@@ -40,15 +42,32 @@ class LobbyViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.joinRoom(code).onSuccess { room ->
-                _uiState.update { it.copy(isLoading = false, joinedRoomId = room.id) }
-                observeRoom(room.id)
+                // The joiner's room is already BOARD_SETUP at this point (joinRoom sets it).
+                // Set both roomId and shouldNavigateToSetup in one atomic update so the
+                // LaunchedEffect in LobbyScreen always sees a non-null joinedRoomId when
+                // it reads shouldNavigateToSetup = true.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        joinedRoomId = room.id,
+                        shouldNavigateToSetup = room.status == GameStatus.BOARD_SETUP
+                    )
+                }
+                // If for some reason the room isn't BOARD_SETUP yet, fall back to observing.
+                if (room.status != GameStatus.BOARD_SETUP) {
+                    observeRoomForCreator(room.id)
+                }
             }.onFailure { error ->
                 _uiState.update { it.copy(isLoading = false, error = error.message) }
             }
         }
     }
 
-    private fun observeRoom(roomId: String) {
+    /**
+     * Used by the creator (and as a fallback for the joiner) to watch for the room
+     * transitioning to BOARD_SETUP, which signals both players are present.
+     */
+    private fun observeRoomForCreator(roomId: String) {
         viewModelScope.launch {
             repository.getGameRoom(roomId).collectLatest { room ->
                 if (room?.status == GameStatus.BOARD_SETUP) {
@@ -57,12 +76,13 @@ class LobbyViewModel(
             }
         }
     }
-    
+
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
 
+    /** Resets all navigation and game state so the screen is ready for a new session. */
     fun resetLobby() {
-        _uiState.value = LobbyUiState()
+        _uiState.update { LobbyUiState() }
     }
 }

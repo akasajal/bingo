@@ -59,44 +59,34 @@ class GameRepositoryImpl(
         dataSource.joinRoom(code, player)
     }
 
+    /**
+     * Fix #2: Board upload is still a plain write (boards are per-player, no race there).
+     * The ready flag is now set inside a Firestore transaction via markPlayerReady,
+     * so concurrent submitBoard calls from both players can't overwrite each other.
+     */
     override suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit> = runCatching {
         ensureAuthenticated()
         dataSource.updateBoard(roomId, playerId, board)
-        val room = dataSource.getGameRoom(roomId).first() ?: throw Exception("Room not found")
-        val updatedPlayers = room.players.toMutableMap()
-        val currentPlayer = updatedPlayers[playerId] ?: throw Exception("Player not found")
-        updatedPlayers[playerId] = currentPlayer.copy(isReady = true)
-        
-        val allReady = updatedPlayers.values.all { it.isReady }
-        val newStatus = if (allReady && updatedPlayers.size == 2) GameStatus.PLAYING else room.status
-        
-        // Randomly pick first player if game is starting
-        val currentTurn = if (newStatus == GameStatus.PLAYING && room.currentTurnPlayerId.isEmpty()) {
-            updatedPlayers.keys.random()
-        } else {
-            room.currentTurnPlayerId
-        }
-
-        dataSource.updateRoom(room.copy(
-            players = updatedPlayers,
-            status = newStatus,
-            currentTurnPlayerId = currentTurn
-        ))
+        dataSource.markPlayerReady(roomId, playerId)
     }
 
+    /**
+     * Fix #1: Turn ownership and duplicate-call checks are now enforced inside a
+     * Firestore transaction in the data source, so a player cannot write a move
+     * on the opponent's turn even by calling the function directly.
+     */
     override suspend fun callNumber(roomId: String, number: Int): Result<Unit> = runCatching {
         ensureAuthenticated()
-        val room = dataSource.getGameRoom(roomId).first() ?: throw Exception("Room not found")
-        
-        // We need all boards to process the call (authoritative)
-        // In a real app, this should happen on a server, but for this "Server-less" approach,
-        // the client who makes the call processes it.
-        val playerIds = room.players.keys
-        val boards = playerIds.associateWith { id ->
-            dataSource.getBoard(roomId, id).first() ?: BingoBoard()
-        }
-        
-        val updatedRoom = gameEngine.processCall(room, boards, number)
-        dataSource.updateRoom(updatedRoom)
+        dataSource.callNumberTransactional(
+            roomId = roomId,
+            callingPlayerId = playerId,
+            number = number,
+            gameEngine = gameEngine,
+            getBoards = { playerIds ->
+                playerIds.associateWith { id ->
+                    dataSource.getBoard(roomId, id).first() ?: BingoBoard()
+                }
+            }
+        )
     }
 }
