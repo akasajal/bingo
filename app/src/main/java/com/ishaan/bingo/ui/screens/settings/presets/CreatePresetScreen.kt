@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,11 +61,12 @@ fun CreatePresetScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = Color.Transparent, // Transparent so it shows Scaffold background
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background // Explicitly set Scaffold background
     ) { innerPadding ->
         Column(
             modifier = Modifier

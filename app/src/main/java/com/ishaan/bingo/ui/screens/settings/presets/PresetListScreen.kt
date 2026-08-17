@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.ui.AppViewModelProvider
@@ -68,11 +69,12 @@ fun PresetListScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = Color.Transparent, // Transparent so it shows Scaffold background
                     titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background // Explicitly set Scaffold background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -185,17 +187,26 @@ fun MiniBingoGrid(board: BingoBoard) {
             ) {
                 repeat(5) { colIndex ->
                     val index = rowIndex * 5 + colIndex
-                    val hasNumber = board.numbers[index] != null
+                    val number = board.numbers[index]
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
                             .background(
-                                color = if (hasNumber) MaterialTheme.colorScheme.primaryContainer 
-                                        else MaterialTheme.bingoColors.cell,
+                                color = MaterialTheme.bingoColors.cell,
                                 shape = RoundedCornerShape(1.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (number != null) {
+                            Text(
+                                text = number.toString(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.ExtraBold
                             )
-                    )
+                        }
+                    }
                 }
             }
         }
