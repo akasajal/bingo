@@ -36,7 +36,8 @@ class BoardSetupViewModel(
                 board = BingoBoard(newNumbers),
                 nextNumber = state.nextNumber + 1,
                 history = state.history + index,
-                isReady = (state.nextNumber == 25)
+                isReady = (state.nextNumber == 25),
+                error = null // Clear error on interaction
             )
         }
     }
@@ -114,6 +115,8 @@ class BoardSetupViewModel(
             
             result.onSuccess {
                 onComplete()
+            }.onFailure { error ->
+                _uiState.update { it.copy(error = error.message) }
             }
         }
     }

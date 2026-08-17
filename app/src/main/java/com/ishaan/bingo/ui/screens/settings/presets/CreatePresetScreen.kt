@@ -153,6 +153,15 @@ fun CreatePresetScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            uiState.error?.let { error ->
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Button(
                 onClick = { 
                     viewModel.saveAsPreset(

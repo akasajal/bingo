@@ -17,10 +17,21 @@ class LocalPresetRepository : PresetBoardRepository {
         if (_presets.value.size >= 6) {
             throw Exception("Maximum 6 presets allowed")
         }
+        
+        val isDuplicate = _presets.value.any { it.board.numbers == preset.board.numbers }
+        if (isDuplicate) {
+            throw Exception("This board arrangement already exists as a preset")
+        }
+
         _presets.update { it + preset }
     }
 
     override suspend fun updatePresetBoard(preset: PresetBoard): Result<Unit> = runCatching {
+        val conflict = _presets.value.any { it.id != preset.id && it.board.numbers == preset.board.numbers }
+        if (conflict) {
+            throw Exception("This arrangement already exists in another preset")
+        }
+
         _presets.update { list ->
             list.map { if (it.id == preset.id) preset else it }
         }
