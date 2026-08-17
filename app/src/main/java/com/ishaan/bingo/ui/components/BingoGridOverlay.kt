@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun BingoGridOverlay(
-    completedLines: Set<String>,
+    completedLines: List<String>,
     lineColor: Color,
     modifier: Modifier = Modifier
 ) {

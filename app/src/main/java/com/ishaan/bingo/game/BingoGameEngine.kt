@@ -25,7 +25,7 @@ class BingoGameEngine(
         
         val updatedPlayers = gameRoom.players.mapValues { (playerId, player) ->
             val board = playerBoards[playerId] ?: return@mapValues player
-            val currentCompletedLines = player.completedLines
+            val currentCompletedLines = player.completedLines.toSet()
             val newlyCompletedLines = lineDetector.detectCompletedLines(board.numbers, newCalledNumbers.toSet())
             
             val freshLines = newlyCompletedLines - currentCompletedLines
@@ -35,7 +35,7 @@ class BingoGameEngine(
 
             player.copy(
                 bingoProgress = newProgress,
-                completedLines = newlyCompletedLines
+                completedLines = newlyCompletedLines.toList()
             )
         }
 

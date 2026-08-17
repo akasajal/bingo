@@ -5,5 +5,5 @@ data class Player(
     val name: String = "",
     val isReady: Boolean = false,
     val bingoProgress: Int = 0, // Number of BINGO letters earned (0-5)
-    val completedLines: Set<String> = emptySet()
+    val completedLines: List<String> = emptyList()
 )

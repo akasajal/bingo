@@ -61,4 +61,8 @@ class LobbyViewModel(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
+
+    fun resetLobby() {
+        _uiState.value = LobbyUiState()
+    }
 }
