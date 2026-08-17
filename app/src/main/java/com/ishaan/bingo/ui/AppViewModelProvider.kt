@@ -11,6 +11,7 @@ import com.ishaan.bingo.ui.screens.lobby.LobbyViewModel
 import com.ishaan.bingo.ui.screens.setup.BoardSetupViewModel
 import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
+import com.ishaan.bingo.ui.screens.result.ResultViewModel
 import com.ishaan.bingo.data.repository.LocalPresetRepository
 
 object AppViewModelProvider {
@@ -38,6 +39,12 @@ object AppViewModelProvider {
     fun gameViewModelFactory(roomId: String) = viewModelFactory {
         initializer {
             GameViewModel(repository, roomId)
+        }
+    }
+
+    fun resultViewModelFactory(roomId: String) = viewModelFactory {
+        initializer {
+            ResultViewModel(repository, roomId)
         }
     }
 }

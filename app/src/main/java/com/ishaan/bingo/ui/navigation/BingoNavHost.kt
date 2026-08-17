@@ -102,11 +102,8 @@ fun BingoNavHost(
         }
         composable(Screen.Result.route) { backStackEntry ->
             val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
-            val winnerId = backStackEntry.arguments?.getString("winnerId") ?: ""
             ResultScreen(
                 roomId = roomId,
-                winnerId = winnerId,
-                myPlayerId = AppViewModelProvider.repository.playerId,
                 onPlayAgain = {
                     navController.navigate(Screen.Lobby.route) {
                         popUpTo(Screen.Lobby.route) { inclusive = true }

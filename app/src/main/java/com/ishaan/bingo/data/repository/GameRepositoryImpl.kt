@@ -7,8 +7,8 @@ import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.model.Player
 import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.game.BingoGameEngine
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
 import java.util.UUID
 
 class GameRepositoryImpl(
@@ -20,6 +20,18 @@ class GameRepositoryImpl(
     override fun getGameRoom(roomId: String): Flow<GameRoom?> = dataSource.getGameRoom(roomId)
 
     override fun getPlayerBoard(roomId: String): Flow<BingoBoard?> = dataSource.getBoard(roomId, playerId)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getOpponentBoard(roomId: String): Flow<BingoBoard?> {
+        return dataSource.getGameRoom(roomId).flatMapLatest { room ->
+            val opponentId = room?.players?.keys?.firstOrNull { it != playerId }
+            if (opponentId != null) {
+                dataSource.getBoard(roomId, opponentId)
+            } else {
+                flowOf(null)
+            }
+        }
+    }
 
     override suspend fun createRoom(): Result<GameRoom> = runCatching {
         dataSource.createRoom()

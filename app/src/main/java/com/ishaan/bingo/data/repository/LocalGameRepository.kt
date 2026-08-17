@@ -30,6 +30,10 @@ class LocalGameRepository(
 
     override fun getPlayerBoard(roomId: String): Flow<BingoBoard?> = _boards.asStateFlow().map { it[playerId] }
 
+    override fun getOpponentBoard(roomId: String): Flow<BingoBoard?> = _boards.asStateFlow().map { boards ->
+        boards.keys.firstOrNull { it != playerId }?.let { boards[it] }
+    }
+
     override suspend fun createRoom(): Result<GameRoom> {
         val room = GameRoom(
             id = "mock-room",
