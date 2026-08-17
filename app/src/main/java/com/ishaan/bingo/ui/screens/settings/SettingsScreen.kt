@@ -25,10 +25,11 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     onPresetsClick: () -> Unit,
     onHowToPlayClick: () -> Unit,
-    viewModel: AppearanceViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     presetViewModel: PresetViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val themeMode by viewModel.themeMode.collectAsState()
+    val confirmCalls by viewModel.confirmCalls.collectAsState()
     val presets by presetViewModel.presets.collectAsState()
 
     Scaffold(
@@ -56,6 +57,7 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
+            // APPEARANCE
             Text(
                 text = "APPEARANCE",
                 style = MaterialTheme.typography.labelLarge,
@@ -103,6 +105,42 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
+            // GAMEPLAY
+            Text(
+                text = "GAMEPLAY",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Confirm Calls",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Requires a double-tap to call a number during gameplay.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = confirmCalls,
+                    onCheckedChange = { viewModel.setConfirmCalls(it) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // PRESETS
             Text(
                 text = "PRESET BOARDS",
                 style = MaterialTheme.typography.labelLarge,
@@ -149,6 +187,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // FOOTER
             Text(
                 text = "HOW TO PLAY",
                 style = MaterialTheme.typography.labelLarge,

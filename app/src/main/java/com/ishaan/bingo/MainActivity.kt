@@ -14,7 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.navigation.BingoNavHost
-import com.ishaan.bingo.ui.screens.settings.AppearanceViewModel
+import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.theme.BingoTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,8 +22,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val appearanceViewModel: AppearanceViewModel = viewModel(factory = AppViewModelProvider.Factory)
-            val themeMode by appearanceViewModel.themeMode.collectAsState()
+            val settingsViewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+            val themeMode by settingsViewModel.themeMode.collectAsState()
             
             BingoTheme(themeMode = themeMode) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->

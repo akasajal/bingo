@@ -5,11 +5,18 @@ import com.ishaan.bingo.ui.domain.model.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class AppearanceViewModel : ViewModel() {
+class SettingsViewModel : ViewModel() {
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode = _themeMode.asStateFlow()
 
+    private val _confirmCalls = MutableStateFlow(false)
+    val confirmCalls = _confirmCalls.asStateFlow()
+
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
+    }
+
+    fun setConfirmCalls(enabled: Boolean) {
+        _confirmCalls.value = enabled
     }
 }

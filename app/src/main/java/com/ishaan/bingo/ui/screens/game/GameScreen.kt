@@ -20,22 +20,33 @@ import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.components.BingoGridOverlay
 import com.ishaan.bingo.ui.theme.bingoColors
+import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 
 @Composable
 fun GameScreen(
     roomId: String,
     onGameFinished: (String) -> Unit,
-    viewModel: GameViewModel
+    viewModel: GameViewModel,
+    settingsViewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val confirmCalls by settingsViewModel.confirmCalls.collectAsState()
     val room = uiState.gameRoom
     val board = uiState.playerBoard
     val myPlayer = room?.players?.get(viewModel.repository.playerId)
+    
+    // For double-tap confirmation
+    var selectedNumber by remember { mutableStateOf<Int?>(null) }
     
     LaunchedEffect(room?.status, room?.winnerPlayerId) {
         if (room?.status == GameStatus.FINISHED && room.winnerPlayerId != null) {
             onGameFinished(room.winnerPlayerId)
         }
+    }
+    
+    // Clear selection if turn ends or number is called
+    LaunchedEffect(room?.currentTurnPlayerId, room?.calledNumbers) {
+        selectedNumber = null
     }
     
     Column(
@@ -87,18 +98,38 @@ fun GameScreen(
                     items(25) { index ->
                         val number = board?.numbers?.get(index)
                         val isCalled = number != null && room?.calledNumbers?.contains(number) == true
+                        val isSelected = number != null && selectedNumber == number
                         
                         Box(
                             modifier = Modifier
                                 .aspectRatio(1f)
                                 .clip(MaterialTheme.shapes.small)
                                 .background(
-                                    color = if (isCalled) MaterialTheme.bingoColors.calledCell
-                                            else MaterialTheme.bingoColors.cell
+                                    color = when {
+                                        isCalled -> MaterialTheme.bingoColors.calledCell
+                                        isSelected -> MaterialTheme.colorScheme.secondaryContainer
+                                        else -> MaterialTheme.bingoColors.cell
+                                    }
                                 )
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.secondary 
+                                            else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = MaterialTheme.shapes.small
+                                )
                                 .clickable(enabled = isMyTurn && !isCalled && number != null) {
-                                    number?.let { viewModel.callNumber(it) }
+                                    number?.let { n ->
+                                        if (!confirmCalls) {
+                                            viewModel.callNumber(n)
+                                        } else {
+                                            if (selectedNumber == n) {
+                                                viewModel.callNumber(n)
+                                                selectedNumber = null
+                                            } else {
+                                                selectedNumber = n
+                                            }
+                                        }
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -106,7 +137,7 @@ fun GameScreen(
                                 Text(
                                     text = number.toString(),
                                     style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                                     color = if (isCalled) MaterialTheme.colorScheme.onPrimary
                                             else MaterialTheme.colorScheme.onSurface
                                 )

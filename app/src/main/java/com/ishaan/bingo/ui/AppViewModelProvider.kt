@@ -9,7 +9,7 @@ import com.ishaan.bingo.data.repository.GameRepositoryImpl
 import com.ishaan.bingo.ui.screens.game.GameViewModel
 import com.ishaan.bingo.ui.screens.lobby.LobbyViewModel
 import com.ishaan.bingo.ui.screens.setup.BoardSetupViewModel
-import com.ishaan.bingo.ui.screens.settings.AppearanceViewModel
+import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
 import com.ishaan.bingo.data.repository.LocalPresetRepository
 
@@ -17,7 +17,7 @@ object AppViewModelProvider {
     // Switch to LocalGameRepository for immediate testing without Firebase setup
     val repository = com.ishaan.bingo.data.repository.LocalGameRepository()
     // val repository = GameRepositoryImpl(FirebaseGameDataSource())
-    val appearanceViewModel = AppearanceViewModel()
+    val settingsViewModel = SettingsViewModel()
     val presetRepository = LocalPresetRepository()
 
     val Factory = viewModelFactory {
@@ -28,7 +28,7 @@ object AppViewModelProvider {
             BoardSetupViewModel(repository)
         }
         initializer {
-            appearanceViewModel
+            settingsViewModel
         }
         initializer {
             PresetViewModel(presetRepository)
