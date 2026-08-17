@@ -13,10 +13,12 @@ import com.ishaan.bingo.ui.screens.result.ResultScreen
 import com.ishaan.bingo.ui.screens.settings.SettingsScreen
 import com.ishaan.bingo.ui.screens.settings.presets.PresetListScreen
 import com.ishaan.bingo.ui.screens.settings.presets.CreatePresetScreen
+import com.ishaan.bingo.ui.screens.settings.howto.HowToPlayScreen
 
 sealed class Screen(val route: String) {
     object Lobby : Screen("lobby")
     object Settings : Screen("settings")
+    object HowToPlay : Screen("how_to_play")
     object PresetList : Screen("preset_list")
     object CreatePreset : Screen("create_preset?presetId={presetId}") {
         fun createRoute(presetId: String? = null) = 
@@ -51,7 +53,13 @@ fun BingoNavHost(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onBackClick = { navController.popBackStack() },
-                onPresetsClick = { navController.navigate(Screen.PresetList.route) }
+                onPresetsClick = { navController.navigate(Screen.PresetList.route) },
+                onHowToPlayClick = { navController.navigate(Screen.HowToPlay.route) }
+            )
+        }
+        composable(Screen.HowToPlay.route) {
+            HowToPlayScreen(
+                onBackClick = { navController.popBackStack() }
             )
         }
         composable(Screen.PresetList.route) {
