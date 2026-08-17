@@ -144,6 +144,30 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = "ABOUT",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "v1.0 - BINGO",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "Two players. One board. Call wisely.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
