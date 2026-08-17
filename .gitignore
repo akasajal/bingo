@@ -28,7 +28,6 @@ captures/
 local.properties
 
 app/google-services.json
-firestore.rules
 
 # Log files
 *.log

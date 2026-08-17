@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Game Room rules
+    match /rooms/{roomId} {
+      // Allow read if user is authenticated
+      allow read: if request.auth != null;
+
+      // Allow create if authenticated
+      allow create: if request.auth != null;
+
+      // Allow update if:
+      // 1. User is one of the players already in the room
+      // 2. Or user is joining a room that has < 2 players
+      allow update: if request.auth != null && (
+        resource.data.players.keys().hasAny([request.auth.uid]) ||
+        resource.data.players.size() < 2
+      );
+
+      // Boards subcollection
+      match /boards/{playerId} {
+        // A player can only write to their own board
+        allow write: if request.auth != null && request.auth.uid == playerId;
+
+        // A player can read their own board anytime.
+        // They can only read the opponent's board if the game is FINISHED.
+        allow read: if request.auth != null && (
+          request.auth.uid == playerId ||
+          get(/databases/$(database)/documents/rooms/$(roomId)).data.status == 'FINISHED'
+        );
+      }
+    }
+  }
+}
