@@ -75,6 +75,19 @@ class BoardSetupViewModel(
         }
     }
 
+    fun randomize() {
+        val shuffledNumbers = (1..25).shuffled()
+        _uiState.update { state ->
+            state.copy(
+                board = BingoBoard(shuffledNumbers),
+                nextNumber = 26,
+                history = emptyList(), // Randomize is a bulk action, clear history
+                isReady = true,
+                error = null
+            )
+        }
+    }
+
     fun loadBoard(board: BingoBoard) {
         _uiState.update { state ->
             // Reconstruct history to enable UNDO on loaded board
