@@ -19,7 +19,7 @@ class GameViewModel(
     val repository: GameRepository,
     private val roomId: String
 ) : ViewModel() {
-    
+
     private val _uiState = MutableStateFlow(GameUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
 
@@ -33,7 +33,7 @@ class GameViewModel(
                 _uiState.update { it.copy(gameRoom = room, isLoading = false) }
             }
         }
-        
+
         viewModelScope.launch {
             repository.getPlayerBoard(roomId).collect { board ->
                 _uiState.update { it.copy(playerBoard = board) }
@@ -42,9 +42,22 @@ class GameViewModel(
     }
 
     fun callNumber(number: Int) {
+        val currentRoom = _uiState.value.gameRoom ?: return
+
+        // Optimistic update — reflect the call instantly in the UI
+        val optimisticRoom = currentRoom.copy(
+            calledNumbers = currentRoom.calledNumbers + number,
+            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
+            // Flip turn optimistically so the UI stops showing "YOUR TURN" immediately
+            currentTurnPlayerId = currentRoom.players.keys
+                .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
+        )
+        _uiState.update { it.copy(gameRoom = optimisticRoom, error = null) }
+
         viewModelScope.launch {
             repository.callNumber(roomId, number).onFailure { error ->
-                _uiState.update { it.copy(error = error.message) }
+                // Roll back to the real server state on failure
+                _uiState.update { it.copy(gameRoom = currentRoom, error = error.message) }
             }
         }
     }
