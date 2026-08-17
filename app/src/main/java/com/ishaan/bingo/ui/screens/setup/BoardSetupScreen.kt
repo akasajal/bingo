@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,16 +17,97 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ishaan.bingo.ui.components.MiniBingoGrid
+import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
 import com.ishaan.bingo.ui.theme.bingoColors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BoardSetupScreen(
     roomId: String,
     onStartGame: () -> Unit,
-    viewModel: BoardSetupViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
+    viewModel: BoardSetupViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
+    presetViewModel: PresetViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val presets by presetViewModel.presets.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showPresetSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    if (showPresetSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showPresetSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "SELECT PRESET",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (presets.isEmpty()) {
+                    Text(
+                        text = "You don't have any preset board.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.heightIn(max = 400.dp)
+                    ) {
+                        items(presets.size) { index ->
+                            val preset = presets[index]
+                            Surface(
+                                onClick = {
+                                    viewModel.loadBoard(preset.board)
+                                    showPresetSheet = false
+                                },
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = MaterialTheme.shapes.medium,
+                                tonalElevation = 2.dp
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .background(MaterialTheme.bingoColors.board, MaterialTheme.shapes.small)
+                                            .padding(4.dp)
+                                    ) {
+                                        MiniBingoGrid(board = preset.board)
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = preset.name,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -105,6 +189,33 @@ fun BoardSetupScreen(
 
         Spacer(modifier = Modifier.height(48.dp)) // Professional gap after grid
         
+        Surface(
+            onClick = { showPresetSheet = true },
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GridView, 
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Use Preset Board?",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {

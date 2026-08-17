@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.ui.AppViewModelProvider
+import com.ishaan.bingo.ui.components.MiniBingoGrid
 import com.ishaan.bingo.ui.theme.bingoColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -168,45 +169,6 @@ fun PresetSlot(
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MiniBingoGrid(board: BingoBoard) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(1.dp)
-    ) {
-        repeat(5) { rowIndex ->
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                repeat(5) { colIndex ->
-                    val index = rowIndex * 5 + colIndex
-                    val number = board.numbers[index]
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(
-                                color = MaterialTheme.bingoColors.cell,
-                                shape = RoundedCornerShape(1.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (number != null) {
-                            Text(
-                                text = number.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
                 }
             }
         }
