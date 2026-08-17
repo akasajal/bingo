@@ -234,15 +234,6 @@ fun GameScreen(
             }
         }
 
-        uiState.error?.let { err ->
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Error: $err",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
         Spacer(modifier = Modifier.height(12.dp))
 
         // Color Legend
