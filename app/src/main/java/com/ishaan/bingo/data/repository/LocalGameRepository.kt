@@ -5,6 +5,7 @@ import com.ishaan.bingo.domain.model.GameRoom
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.model.Player
 import com.ishaan.bingo.domain.repository.GameRepository
+import com.ishaan.bingo.game.BotMoveStrategy
 import com.ishaan.bingo.game.BingoGameEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ import java.util.UUID
  */
 class LocalGameRepository(
     private val gameEngine: BingoGameEngine = BingoGameEngine(),
+    private val botMoveStrategy: BotMoveStrategy = BotMoveStrategy(),
     override val playerId: String = "local-player-1"
 ) : GameRepository {
 
@@ -113,10 +115,9 @@ class LocalGameRepository(
     private suspend fun simulateOpponentMove(room: GameRoom, boards: Map<String, BingoBoard>) {
         kotlinx.coroutines.delay(800) // Thinking time
         val p2Board = boards[player2Id] ?: return
-        val availableNumbers = p2Board.numbers.filterNotNull().filter { !room.calledNumbers.contains(it) }
+        val chosen = botMoveStrategy.chooseNumber(p2Board, room.calledNumbers.toSet())
 
-        if (availableNumbers.isNotEmpty()) {
-            val chosen = availableNumbers.random()
+        if (chosen != null) {
             val nextRoom = _room.value ?: return
             _room.value = gameEngine.processCall(nextRoom, boards, chosen)
         }
