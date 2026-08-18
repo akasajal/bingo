@@ -89,4 +89,36 @@ class BingoGameEngineTest {
         assertEquals(GameStatus.FINISHED, room.status)
         assertEquals(p1Id, room.winnerPlayerId)
     }
+
+    @Test
+    fun `when both players reach bingo simultaneously the caller wins`() {
+        // Construct boards where calling 25 completes the 5th line for both.
+        // P1 board: 1..25 sequentially.
+        // P2 board: also 1..25 sequentially for simplicity in this test.
+        val boards = mapOf(p1Id to p1Board, p2Id to p1Board)
+        
+        var room = initialRoom.copy(currentTurnPlayerId = p1Id)
+        
+        // Setup so both have 4 progress letters.
+        // Call all numbers from 1 to 20 (completes 4 rows for both).
+        for (i in 1..20) {
+            room = engine.processCall(room, boards, i)
+        }
+        
+        assertEquals(4, room.players[p1Id]?.bingoProgress)
+        assertEquals(4, room.players[p2Id]?.bingoProgress)
+        
+        // P1's turn. P1 calls 25 (which will complete Row 4 for both).
+        // Since P1 is the caller, P1 should win.
+        
+        // Ensure it's P1's turn (it flips every turn, so let's force it for the test setup)
+        room = room.copy(currentTurnPlayerId = p1Id)
+        
+        room = engine.processCall(room, boards, 25)
+        
+        assertEquals(5, room.players[p1Id]?.bingoProgress)
+        assertEquals(5, room.players[p2Id]?.bingoProgress)
+        assertEquals(GameStatus.FINISHED, room.status)
+        assertEquals(p1Id, room.winnerPlayerId) // Caller wins priority
+    }
 }

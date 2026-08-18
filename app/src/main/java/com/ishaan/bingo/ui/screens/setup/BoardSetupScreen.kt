@@ -371,7 +371,7 @@ fun BoardSetupScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = { viewModel.submitBoard(roomId, onStartGame) },
+            onClick = { viewModel.submitBoard(roomId) },
             modifier = Modifier.fillMaxWidth(),
             enabled = uiState.isReady && !uiState.isSubmitting && !uiState.isWaitingForOpponent,
             shape = MaterialTheme.shapes.medium

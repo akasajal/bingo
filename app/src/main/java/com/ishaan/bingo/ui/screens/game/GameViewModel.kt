@@ -57,7 +57,7 @@ class GameViewModel(
         _uiState.update { it.copy(gameRoom = optimisticRoom, isCallingNumber = true, error = null) }
 
         viewModelScope.launch {
-            repository.callNumber(roomId, number)
+            repository.callNumber(roomId, currentRoom.players.keys, number)
                 .onSuccess {
                     _uiState.update { it.copy(isCallingNumber = false) }
                 }

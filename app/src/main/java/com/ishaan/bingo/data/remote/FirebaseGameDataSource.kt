@@ -38,10 +38,6 @@ class FirebaseGameDataSource(
         roomsCollection.document(room.id).set(room).await()
     }
 
-    /**
-     * Fix #6: Wraps the read-check-write in a Firestore transaction so two players
-     * joining simultaneously cannot both pass the size check and produce a 3-player room.
-     */
     suspend fun joinRoom(code: String, player: Player): GameRoom {
         val query = roomsCollection.whereEqualTo("code", code).limit(1).get().await()
         if (query.isEmpty) throw Exception("Room not found")
@@ -76,12 +72,6 @@ class FirebaseGameDataSource(
         return resultRoom ?: throw Exception("Transaction failed")
     }
 
-    /**
-     * Fix #2: Marks a player as ready inside a transaction so concurrent submitBoard
-     * calls from both players cannot overwrite each other's isReady flag.
-     * Returns the room after the transaction — callers can inspect status to know
-     * whether the game has started.
-     */
     suspend fun markPlayerReady(roomId: String, playerId: String): GameRoom {
         val docRef = roomsCollection.document(roomId)
         var resultRoom: GameRoom? = null
@@ -119,43 +109,22 @@ class FirebaseGameDataSource(
         return resultRoom ?: throw Exception("Transaction failed")
     }
 
-    /**
-     * Fix #1: Validates inside a transaction that it is actually this player's turn
-     * and that the number hasn't already been called, then writes the result atomically.
-     * The game engine is called inside the transaction body so the check and write
-     * are never separated by a concurrent update.
-     */
     suspend fun callNumberTransactional(
         roomId: String,
         callingPlayerId: String,
         number: Int,
         gameEngine: BingoGameEngine,
-        getBoards: suspend (playerIds: Set<String>) -> Map<String, BingoBoard>
+        boards: Map<String, BingoBoard>
     ): GameRoom {
         val docRef = roomsCollection.document(roomId)
         var resultRoom: GameRoom? = null
-
-        // Fetch boards outside the transaction (subcollection reads aren't supported
-        // inside Firestore transactions). We read the room inside the transaction
-        // for the authoritative turn/called-number check; the boards are immutable
-        // after submitBoard so reading them outside is safe.
-        val boardsSnapshot: Map<String, BingoBoard> by lazy { throw IllegalStateException() }
-        // We need the player IDs first — do a lightweight pre-read.
-        val preRoom = docRef.get().await().toObject(GameRoom::class.java)
-            ?: throw Exception("Room not found")
-
-        if (preRoom.currentTurnPlayerId != callingPlayerId) {
-            throw Exception("Not your turn")
-        }
-
-        val boards = getBoards(preRoom.players.keys)
 
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
             val room = snapshot.toObject(GameRoom::class.java)
                 ?: throw Exception("Room not found")
 
-            // Re-validate inside the transaction against the authoritative snapshot
+            // Authoritative validation inside the transaction
             if (room.status != GameStatus.PLAYING) {
                 throw Exception("Game is not in progress")
             }

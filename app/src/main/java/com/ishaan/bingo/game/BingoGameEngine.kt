@@ -39,7 +39,15 @@ class BingoGameEngine(
             )
         }
 
-        val winnerId = updatedPlayers.entries.find { it.value.bingoProgress >= 5 }?.key
+        val callerId = gameRoom.currentTurnPlayerId
+        val callerWon = updatedPlayers[callerId]?.bingoProgress?.let { it >= 5 } ?: false
+
+        val winnerId = if (callerWon) {
+            callerId
+        } else {
+            updatedPlayers.entries.find { it.value.bingoProgress >= 5 }?.key
+        }
+
         val newStatus = if (winnerId != null) GameStatus.FINISHED else GameStatus.PLAYING
 
         // Switch turn

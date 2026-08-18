@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.repository.GameRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -27,8 +28,13 @@ class BoardSetupViewModel(
     private val _uiState = MutableStateFlow(BoardSetupUiState())
     val uiState = _uiState.asStateFlow()
 
+    private var gameStartObserverJob: Job? = null
+
     fun observeGameStart(roomId: String, onStarted: () -> Unit) {
-        viewModelScope.launch {
+        // Guard: only one active observer at a time — LaunchedEffect can re-fire
+        // on config changes and we must not accumulate duplicate collector coroutines.
+        if (gameStartObserverJob?.isActive == true) return
+        gameStartObserverJob = viewModelScope.launch {
             repository.getGameRoom(roomId).collectLatest { room ->
                 if (room?.status == GameStatus.PLAYING) {
                     onStarted()
@@ -45,7 +51,7 @@ class BoardSetupViewModel(
 
             val newNumbers = state.board.numbers.toMutableList()
             newNumbers[index] = state.nextNumber
-            
+
             state.copy(
                 board = BingoBoard(newNumbers),
                 nextNumber = state.nextNumber + 1,
@@ -57,7 +63,7 @@ class BoardSetupViewModel(
         }
     }
 
-    fun submitBoard(roomId: String, onComplete: () -> Unit) {
+    fun submitBoard(roomId: String) {
         if (_uiState.value.isSubmitting) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true, error = null) }
@@ -86,7 +92,7 @@ class BoardSetupViewModel(
             val lastIndex = state.history.last()
             val newNumbers = state.board.numbers.toMutableList()
             newNumbers[lastIndex] = null
-            
+
             state.copy(
                 board = BingoBoard(newNumbers),
                 nextNumber = state.nextNumber - 1,
@@ -98,7 +104,7 @@ class BoardSetupViewModel(
     }
 
     fun delete() {
-        _uiState.update { 
+        _uiState.update {
             BoardSetupUiState()
         }
     }
@@ -126,7 +132,7 @@ class BoardSetupViewModel(
                 val index = board.numbers.indexOf(num)
                 if (index != -1) history.add(index) else break
             }
-            
+
             state.copy(
                 board = board,
                 nextNumber = history.size + 1,
@@ -138,8 +144,8 @@ class BoardSetupViewModel(
     }
 
     fun saveAsPreset(
-        name: String, 
-        repository: com.ishaan.bingo.domain.repository.PresetBoardRepository, 
+        name: String,
+        repository: com.ishaan.bingo.domain.repository.PresetBoardRepository,
         existingId: String? = null,
         onComplete: () -> Unit
     ) {
@@ -149,13 +155,13 @@ class BoardSetupViewModel(
                 name = name,
                 board = _uiState.value.board
             )
-            
+
             val result = if (existingId != null) {
                 repository.updatePresetBoard(preset)
             } else {
                 repository.addPresetBoard(preset)
             }
-            
+
             result.onSuccess {
                 onComplete()
             }.onFailure { error ->

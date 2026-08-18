@@ -8,7 +8,7 @@ import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.model.Player
 import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.game.BingoGameEngine
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -80,18 +80,24 @@ class GameRepositoryImpl(
      * Firestore transaction in the data source, so a player cannot write a move
      * on the opponent's turn even by calling the function directly.
      */
-    override suspend fun callNumber(roomId: String, number: Int): Result<Unit> = runCatching {
+    override suspend fun callNumber(roomId: String, playerIds: Set<String>, number: Int): Result<Unit> = runCatching {
         ensureAuthenticated()
+        
+        // Parallelize board fetching to minimize latency
+        val boards = kotlinx.coroutines.coroutineScope {
+            playerIds.map { id ->
+                async {
+                    id to (dataSource.getBoardOnce(roomId, id) ?: BingoBoard())
+                }
+            }.awaitAll().toMap()
+        }
+
         dataSource.callNumberTransactional(
             roomId = roomId,
             callingPlayerId = playerId,
             number = number,
             gameEngine = gameEngine,
-            getBoards = { playerIds ->
-                playerIds.associateWith { id ->
-                    dataSource.getBoardOnce(roomId, id) ?: BingoBoard()
-                }
-            }
+            boards = boards
         )
     }
 

@@ -100,7 +100,7 @@ class LocalGameRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun callNumber(roomId: String, number: Int): Result<Unit> {
+    override suspend fun callNumber(roomId: String, playerIds: Set<String>, number: Int): Result<Unit> {
         val room = _room.value ?: return Result.failure(Exception("Room not found"))
         val boards = _boards.value
 
