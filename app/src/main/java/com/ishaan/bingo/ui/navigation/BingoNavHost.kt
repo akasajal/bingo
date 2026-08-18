@@ -43,7 +43,10 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
                 onGameJoined = { roomId, isBot ->
                     navController.navigate(Screen.BoardSetup.createRoute(roomId, isBot))
                 },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                    factory = AppViewModelProvider.Factory
+                )
             )
         }
         composable(Screen.Settings.route) {
@@ -74,9 +77,15 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
         composable(Screen.BoardSetup.route) { backStackEntry ->
             val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
             val isBot = backStackEntry.arguments?.getString("isBot")?.toBoolean() ?: false
+            // Share the same LobbyViewModel instance so we can reset its state on back
+            val lobbyViewModel: com.ishaan.bingo.ui.screens.lobby.LobbyViewModel =
+                androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
             BoardSetupScreen(
                 roomId = roomId,
-                // Fix: use the bot-aware factory so BoardSetupViewModel gets the correct repository
+                onBack = {
+                    lobbyViewModel.resetLobby() // clear shouldNavigateToSetup before returning
+                    navController.popBackStack(Screen.Lobby.route, inclusive = false)
+                },
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                     factory = AppViewModelProvider.boardSetupViewModelFactory(roomId, isBot)
                 ),
@@ -90,6 +99,10 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
                 roomId = roomId,
                 onGameFinished = { winnerId ->
                     navController.navigate(Screen.Result.createRoute(roomId, winnerId, isBot))
+                },
+                onForfeit = {
+                    // Pop everything back to Lobby cleanly
+                    navController.popBackStack(Screen.Lobby.route, inclusive = false)
                 },
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                     factory = AppViewModelProvider.gameViewModelFactory(roomId, isBot)

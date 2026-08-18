@@ -1,6 +1,8 @@
 package com.ishaan.bingo.ui.screens.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -31,6 +33,7 @@ import com.ishaan.bingo.ui.theme.HapticManager
 fun GameScreen(
     roomId: String,
     onGameFinished: (String) -> Unit,
+    onForfeit: () -> Unit,
     viewModel: GameViewModel,
     settingsViewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -58,14 +61,38 @@ fun GameScreen(
         selectedNumber = null
     }
 
+    // Intercept system back — show confirm dialog instead of silently popping
+    var showForfeitDialog by remember { mutableStateOf(false) }
+    BackHandler { showForfeitDialog = true }
+
+    if (showForfeitDialog) {
+        AlertDialog(
+            onDismissRequest = { showForfeitDialog = false },
+            title = { Text("Forfeit game?") },
+            text = { Text("Are you sure you want to leave? Your current game will be abandoned.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showForfeitDialog = false
+                        onForfeit()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("FORFEIT") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForfeitDialog = false }) { Text("KEEP PLAYING") }
+            }
+        )
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().systemBarsPadding().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // BINGO Progress Header
         BingoHeader(progress = myPlayer?.bingoProgress ?: 0)
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Turn Indicator Card
         val isMyTurn = room?.currentTurnPlayerId == viewModel.repository.playerId
@@ -98,7 +125,7 @@ fun GameScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // 5x5 Board with Strikethrough Overlay
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -179,7 +206,7 @@ fun GameScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Last Called Info
         Card(
@@ -234,7 +261,7 @@ fun GameScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // Color Legend
         Row(

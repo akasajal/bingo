@@ -1,6 +1,8 @@
 package com.ishaan.bingo.ui.screens.setup
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,6 +31,7 @@ import com.ishaan.bingo.ui.theme.HapticManager
 fun BoardSetupScreen(
     roomId: String,
     onStartGame: () -> Unit,
+    onBack: () -> Unit,
     viewModel: BoardSetupViewModel,
     presetViewModel: PresetViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
     settingsViewModel: com.ishaan.bingo.ui.screens.settings.SettingsViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
@@ -41,6 +44,30 @@ fun BoardSetupScreen(
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
     val hapticManager = remember { HapticManager(context) }
+
+    // Intercept system back with a confirmation dialog
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    BackHandler { showLeaveDialog = true }
+
+    if (showLeaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveDialog = false },
+            title = { Text("Leave setup?") },
+            text = { Text("Your board progress will be lost.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLeaveDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("LEAVE") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveDialog = false }) { Text("STAY") }
+            }
+        )
+    }
 
     if (showPresetSheet) {
         ModalBottomSheet(
@@ -141,7 +168,7 @@ fun BoardSetupScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().systemBarsPadding().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "BUILD YOUR BOARD", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)

@@ -87,6 +87,8 @@ class LobbyViewModel(
         }
     }
 
+    fun consumeNavigation() { _uiState.update { it.copy(shouldNavigateToSetup = false) } }
+
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
     fun resetLobby() { _uiState.update { LobbyUiState() } }

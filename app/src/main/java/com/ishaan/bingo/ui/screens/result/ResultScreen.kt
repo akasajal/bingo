@@ -1,6 +1,8 @@
 package com.ishaan.bingo.ui.screens.result
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -32,8 +34,11 @@ fun ResultScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val room = uiState.gameRoom ?: return
+
+    // Block system back on result screen — the only exit is Play Again
+    BackHandler { /* intentionally consumed — use Play Again button */ }
     val isWinner = room.winnerPlayerId == viewModel.myPlayerId
-    
+
     val currentBoard = if (uiState.showingOpponentBoard) uiState.opponentBoard else uiState.myBoard
     val viewingPlayerId = if (uiState.showingOpponentBoard) {
         room.players.keys.firstOrNull { it != viewModel.myPlayerId }
@@ -45,6 +50,7 @@ fun ResultScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -56,7 +62,7 @@ fun ResultScreen(
             fontWeight = FontWeight.Black,
             color = if (isWinner) MaterialTheme.bingoColors.success else MaterialTheme.colorScheme.error
         )
-        
+
         Text(
             text = if (isWinner) "Victory is yours!" else "Better luck next time.",
             style = MaterialTheme.typography.titleMedium,
@@ -84,7 +90,7 @@ fun ResultScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Button(
                 onClick = { viewModel.toggleBoardReveal() },
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
@@ -120,14 +126,14 @@ fun ResultScreen(
                     items(25) { index ->
                         val number = currentBoard?.numbers?.get(index)
                         val isCalled = number != null && room.calledNumbers.contains(number)
-                        
+
                         Box(
                             modifier = Modifier
                                 .aspectRatio(1f)
                                 .clip(MaterialTheme.shapes.small)
                                 .background(
                                     color = if (isCalled) MaterialTheme.bingoColors.calledCell
-                                            else MaterialTheme.bingoColors.cell
+                                    else MaterialTheme.bingoColors.cell
                                 )
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
                             contentAlignment = Alignment.Center
@@ -138,7 +144,7 @@ fun ResultScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isCalled) MaterialTheme.colorScheme.onPrimary
-                                            else MaterialTheme.colorScheme.onSurface
+                                    else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -165,7 +171,7 @@ fun ResultScreen(
         ) {
             Text("PLAY AGAIN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

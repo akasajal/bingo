@@ -1,6 +1,7 @@
 package com.ishaan.bingo.ui.screens.lobby
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
@@ -25,7 +26,10 @@ fun LobbyScreen(
 
     LaunchedEffect(uiState.shouldNavigateToSetup, uiState.joinedRoomId) {
         if (uiState.shouldNavigateToSetup) {
-            uiState.joinedRoomId?.let { onGameJoined(it, uiState.isBotGame) }
+            uiState.joinedRoomId?.let {
+                viewModel.consumeNavigation() // clear flag before navigating so back doesn't re-trigger
+                onGameJoined(it, uiState.isBotGame)
+            }
         }
     }
 
@@ -76,7 +80,7 @@ fun LobbyScreen(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
