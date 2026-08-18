@@ -9,7 +9,6 @@ import com.ishaan.bingo.domain.model.Player
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
 
 class FirebaseGameDataSource(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -23,10 +22,10 @@ class FirebaseGameDataSource(
     }
 
     fun createRoomDraft(): GameRoom {
-        val roomId = UUID.randomUUID().toString()
         val code = (1..5).map { (('A'..'Z') + ('0'..'9')).random() }.joinToString("")
+        // Fix: Use the 5-char code as the document ID for direct, high-speed joins
         return GameRoom(
-            id = roomId,
+            id = code,
             code = code,
             status = GameStatus.WAITING_FOR_PLAYER
         )
@@ -37,27 +36,29 @@ class FirebaseGameDataSource(
     }
 
     suspend fun joinRoom(code: String, player: Player): GameRoom {
-        val query = roomsCollection.whereEqualTo("code", code).limit(1).get().await()
-        if (query.isEmpty) throw Exception("Room not found")
-
-        val docRef = query.documents[0].reference
+        // Fix: Direct document lookup by ID (code) instead of query is much faster
+        val docRef = roomsCollection.document(code)
         var resultRoom: GameRoom? = null
 
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
+            if (!snapshot.exists()) throw Exception("Room not found")
+            
             val room = snapshot.toObject(GameRoom::class.java)
                 ?: throw Exception("Invalid room data")
 
-            if (room.players.size >= 2) throw Exception("Room is full")
+            if (room.players.size >= 2 && !room.players.containsKey(player.id)) {
+                throw Exception("Room is full")
+            }
+            
             if (room.players.containsKey(player.id)) {
-                // Already in the room (e.g. reconnect) — no-op
+                // Reconnect — return current room
                 resultRoom = room
                 return@runTransaction
             }
 
             val updatedPlayers = room.players + (player.id to player)
-            val updatedStatus =
-                if (updatedPlayers.size == 2) GameStatus.BOARD_SETUP else room.status
+            val updatedStatus = if (updatedPlayers.size == 2) GameStatus.BOARD_SETUP else room.status
 
             val updatedRoom = room.copy(
                 players = updatedPlayers,

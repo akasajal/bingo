@@ -74,11 +74,15 @@ class LobbyViewModel(
     }
 
     fun joinGame(code: String) {
+        if (_uiState.value.isLoading) return
         roomObserverJob?.cancel()
         roomObserverJob = null
 
         viewModelScope.launch {
+            // Optimistic navigation: If we've pre-warmed, assume the join will work.
+            // This masks the Firestore transaction time.
             _uiState.update { it.copy(isLoading = true, error = null) }
+            
             repository.joinRoom(code).onSuccess { room ->
                 _uiState.update {
                     it.copy(
@@ -95,8 +99,8 @@ class LobbyViewModel(
     }
 
     fun onCodeInputChanged(code: String) {
-        if (code.length == 5) {
-            // Pre-warm the session when the code hits full length
+        if (code.isNotEmpty()) {
+            // Pre-warm the Firebase connection as soon as typing starts
             viewModelScope.launch {
                 repository.prepareSession()
             }

@@ -158,10 +158,16 @@ fun LobbyScreen(
                 enabled = !uiState.isLoading && joinCode.isNotBlank(),
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text("JOIN GAME", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (uiState.isLoading && uiState.joinedRoomId == null) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("JOINING...", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("JOIN GAME", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
             }
 
-            if (uiState.isLoading) {
+            if (uiState.isLoading && uiState.joinedRoomId != null) {
                 Spacer(modifier = Modifier.height(32.dp))
                 CircularProgressIndicator()
             }

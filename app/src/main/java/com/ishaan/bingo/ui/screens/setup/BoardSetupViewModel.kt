@@ -65,13 +65,18 @@ class BoardSetupViewModel(
 
     fun submitBoard(roomId: String) {
         if (_uiState.value.isSubmitting) return
+        
+        // Optimistic UI — assume success and show waiting state immediately
+        val previousState = _uiState.value
+        _uiState.update { it.copy(isSubmitting = true, isWaitingForOpponent = true, error = null) }
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isSubmitting = true, error = null) }
-            repository.submitBoard(roomId, _uiState.value.board).onSuccess {
-                _uiState.update { it.copy(isSubmitting = false, isWaitingForOpponent = true) }
+            repository.submitBoard(roomId, previousState.board).onSuccess {
+                _uiState.update { it.copy(isSubmitting = false) }
             }.onFailure { error ->
+                // Roll back to previous state on failure
                 _uiState.update {
-                    it.copy(
+                    previousState.copy(
                         isSubmitting = false,
                         isWaitingForOpponent = false,
                         error = mapError(error)
