@@ -106,7 +106,7 @@ class LocalGameRepository(
     }
 
     private suspend fun simulateOpponentMove(room: GameRoom, boards: Map<String, BingoBoard>) {
-        kotlinx.coroutines.delay(1500) // Thinking time
+        kotlinx.coroutines.delay(800) // Thinking time
         val p2Board = boards[player2Id] ?: return
         val availableNumbers = p2Board.numbers.filterNotNull().filter { !room.calledNumbers.contains(it) }
 
