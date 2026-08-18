@@ -113,10 +113,16 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
             val isBot = backStackEntry.arguments?.getString("isBot")?.toBoolean() ?: false
             ResultScreen(
                 roomId = roomId,
-                onPlayAgain = {
+                onHome = {
                     lobbyViewModel.resetLobby()
                     navController.navigate(Screen.Lobby.route) {
                         popUpTo(Screen.Lobby.route) { inclusive = true }
+                    }
+                },
+                onPlayAgainReady = {
+                    navController.navigate(Screen.BoardSetup.createRoute(roomId, isBot)) {
+                        popUpTo(Screen.Lobby.route) { inclusive = false }
+                        launchSingleTop = true
                     }
                 },
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(

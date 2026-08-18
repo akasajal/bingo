@@ -13,7 +13,9 @@ data class ResultUiState(
     val myBoard: BingoBoard? = null,
     val opponentBoard: BingoBoard? = null,
     val showingOpponentBoard: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isPlayingAgain: Boolean = false,
+    val error: String? = null
 )
 
 class ResultViewModel(
@@ -37,12 +39,12 @@ class ResultViewModel(
                 repository.getPlayerBoard(roomId),
                 repository.getOpponentBoard(roomId)
             ) { room, playerBoard, opponentBoard ->
-                ResultUiState(
+                val current = _uiState.value
+                current.copy(
                     gameRoom = room,
                     myBoard = playerBoard,
                     opponentBoard = opponentBoard,
-                    isLoading = false,
-                    showingOpponentBoard = _uiState.value.showingOpponentBoard
+                    isLoading = false
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -52,5 +54,23 @@ class ResultViewModel(
 
     fun toggleBoardReveal() {
         _uiState.update { it.copy(showingOpponentBoard = !it.showingOpponentBoard) }
+    }
+
+    fun playAgain() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isPlayingAgain = true, error = null) }
+            repository.playAgain(roomId).onFailure {
+                _uiState.update {
+                    it.copy(
+                        isPlayingAgain = false,
+                        error = "We couldn't start a new game. Check your connection and try again."
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }

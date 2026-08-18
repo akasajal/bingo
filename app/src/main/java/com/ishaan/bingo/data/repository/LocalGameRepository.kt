@@ -36,6 +36,8 @@ class LocalGameRepository(
         boards.keys.firstOrNull { it != playerId }?.let { boards[it] }
     }
 
+    override suspend fun prepareSession(): Result<Unit> = Result.success(Unit)
+
     override fun createRoomDraft(): GameRoom = GameRoom(
         id = "mock-room",
         code = "DEBUG",
@@ -77,7 +79,9 @@ class LocalGameRepository(
     }
 
     override suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit> {
-        _boards.update { it + (playerId to board) }
+        _boards.update { boards ->
+            boards + (playerId to board) + (player2Id to (boards[player2Id] ?: BingoBoard((1..25).toList().shuffled())))
+        }
 
         _room.update { room ->
             val r = room ?: return@update null
@@ -109,6 +113,33 @@ class LocalGameRepository(
             simulateOpponentMove(updatedRoom, boards)
         }
 
+        return Result.success(Unit)
+    }
+
+    override suspend fun playAgain(roomId: String): Result<Unit> {
+        _room.update { room ->
+            val r = room ?: return Result.failure(Exception("Room not found"))
+            if (r.status == GameStatus.BOARD_SETUP) return Result.success(Unit)
+            if (r.status != GameStatus.FINISHED) return Result.failure(Exception("Game is not finished yet"))
+
+            val resetPlayers = r.players.mapValues { (_, player) ->
+                player.copy(
+                    isReady = false,
+                    bingoProgress = 0,
+                    completedLines = emptyList()
+                )
+            }
+
+            r.copy(
+                status = GameStatus.BOARD_SETUP,
+                players = resetPlayers,
+                currentTurnPlayerId = "",
+                calledNumbers = emptyList(),
+                callerMap = emptyMap(),
+                winnerPlayerId = null
+            )
+        }
+        _boards.value = emptyMap()
         return Result.success(Unit)
     }
 

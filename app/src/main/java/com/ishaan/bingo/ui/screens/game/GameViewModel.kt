@@ -12,6 +12,7 @@ data class GameUiState(
     val gameRoom: GameRoom? = null,
     val playerBoard: BingoBoard? = null,
     val isLoading: Boolean = false,
+    val isCallingNumber: Boolean = false,
     val error: String? = null
 )
 
@@ -42,6 +43,7 @@ class GameViewModel(
     }
 
     fun callNumber(number: Int) {
+        if (_uiState.value.isCallingNumber) return
         val currentRoom = _uiState.value.gameRoom ?: return
 
         // Optimistic update — reflect the call instantly in the UI
@@ -52,13 +54,23 @@ class GameViewModel(
             currentTurnPlayerId = currentRoom.players.keys
                 .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
         )
-        _uiState.update { it.copy(gameRoom = optimisticRoom, error = null) }
+        _uiState.update { it.copy(gameRoom = optimisticRoom, isCallingNumber = true, error = null) }
 
         viewModelScope.launch {
-            repository.callNumber(roomId, number).onFailure { error ->
-                // Roll back to the real server state on failure
-                _uiState.update { it.copy(gameRoom = currentRoom, error = error.message) }
-            }
+            repository.callNumber(roomId, number)
+                .onSuccess {
+                    _uiState.update { it.copy(isCallingNumber = false) }
+                }
+                .onFailure { error ->
+                    // Roll back to the real server state on failure
+                    _uiState.update {
+                        it.copy(
+                            gameRoom = currentRoom,
+                            isCallingNumber = false,
+                            error = error.message
+                        )
+                    }
+                }
         }
     }
 }

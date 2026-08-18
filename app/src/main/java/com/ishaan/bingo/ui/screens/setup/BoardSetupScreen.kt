@@ -44,6 +44,16 @@ fun BoardSetupScreen(
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
     val hapticManager = remember { HapticManager(context) }
+    var startNavigationHandled by remember(roomId) { mutableStateOf(false) }
+
+    LaunchedEffect(roomId) {
+        viewModel.observeGameStart(roomId) {
+            if (!startNavigationHandled) {
+                startNavigationHandled = true
+                onStartGame()
+            }
+        }
+    }
 
     // Intercept system back with a confirmation dialog
     var showLeaveDialog by remember { mutableStateOf(false) }
@@ -162,6 +172,19 @@ fun BoardSetupScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text("CANCEL")
+                }
+            }
+        )
+    }
+
+    uiState.error?.let { error ->
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("Could not start game") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("OK")
                 }
             }
         )
@@ -295,6 +318,8 @@ fun BoardSetupScreen(
         ) {
             val statusText = if (uiState.nextNumber <= 25) {
                 "Next Number: ${uiState.nextNumber}"
+            } else if (uiState.isWaitingForOpponent) {
+                "WAITING FOR OPPONENT"
             } else {
                 "BOARD COMPLETE"
             }
@@ -348,10 +373,22 @@ fun BoardSetupScreen(
         Button(
             onClick = { viewModel.submitBoard(roomId, onStartGame) },
             modifier = Modifier.fillMaxWidth(),
-            enabled = uiState.isReady,
+            enabled = uiState.isReady && !uiState.isSubmitting && !uiState.isWaitingForOpponent,
             shape = MaterialTheme.shapes.medium
         ) {
-            Text("START GAME", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            if (uiState.isSubmitting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text(
+                    if (uiState.isWaitingForOpponent) "WAITING FOR OPPONENT" else "START GAME",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

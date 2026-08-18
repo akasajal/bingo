@@ -31,6 +31,12 @@ class LobbyViewModel(
     private var roomObserverJob: Job? = null
     private var roomCreationJob: Job? = null
 
+    init {
+        viewModelScope.launch {
+            repository.prepareSession()
+        }
+    }
+
     fun createGame() {
         // Cancel any leftover observer from a previous session before starting fresh
         roomObserverJob?.cancel()
@@ -78,7 +84,7 @@ class LobbyViewModel(
                     it.copy(
                         isLoading = false,
                         joinedRoomId = room.id,
-                        shouldNavigateToSetup = room.status == GameStatus.BOARD_SETUP
+                        shouldNavigateToSetup = true
                     )
                 }
                 if (room.status != GameStatus.BOARD_SETUP) observeRoomForCreator(room.id)
@@ -115,7 +121,13 @@ class LobbyViewModel(
         roomObserverJob = viewModelScope.launch {
             repository.getGameRoom(roomId).collectLatest { room ->
                 if (room?.status == GameStatus.BOARD_SETUP) {
-                    _uiState.update { it.copy(shouldNavigateToSetup = true) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            joinedRoomId = room.id,
+                            shouldNavigateToSetup = true
+                        )
+                    }
                 }
             }
         }

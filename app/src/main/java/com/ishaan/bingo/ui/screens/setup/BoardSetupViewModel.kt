@@ -3,9 +3,11 @@ package com.ishaan.bingo.ui.screens.setup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ishaan.bingo.domain.model.BingoBoard
+import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.repository.GameRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -14,6 +16,8 @@ data class BoardSetupUiState(
     val nextNumber: Int = 1,
     val history: List<Int> = emptyList(), // Indices of numbers placed in order
     val isReady: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val isWaitingForOpponent: Boolean = false,
     val error: String? = null
 )
 
@@ -22,6 +26,16 @@ class BoardSetupViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BoardSetupUiState())
     val uiState = _uiState.asStateFlow()
+
+    fun observeGameStart(roomId: String, onStarted: () -> Unit) {
+        viewModelScope.launch {
+            repository.getGameRoom(roomId).collectLatest { room ->
+                if (room?.status == GameStatus.PLAYING) {
+                    onStarted()
+                }
+            }
+        }
+    }
 
     fun onCellClick(index: Int) {
         _uiState.update { state ->
@@ -37,19 +51,32 @@ class BoardSetupViewModel(
                 nextNumber = state.nextNumber + 1,
                 history = state.history + index,
                 isReady = (state.nextNumber == 25),
+                isWaitingForOpponent = false,
                 error = null // Clear error on interaction
             )
         }
     }
 
     fun submitBoard(roomId: String, onComplete: () -> Unit) {
+        if (_uiState.value.isSubmitting) return
         viewModelScope.launch {
+            _uiState.update { it.copy(isSubmitting = true, error = null) }
             repository.submitBoard(roomId, _uiState.value.board).onSuccess {
-                onComplete()
+                _uiState.update { it.copy(isSubmitting = false, isWaitingForOpponent = true) }
             }.onFailure { error ->
-                _uiState.update { it.copy(error = error.message) }
+                _uiState.update {
+                    it.copy(
+                        isSubmitting = false,
+                        isWaitingForOpponent = false,
+                        error = error.message ?: "We couldn't start the game. Check your connection and try again."
+                    )
+                }
             }
         }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     fun undo() {
@@ -64,7 +91,8 @@ class BoardSetupViewModel(
                 board = BingoBoard(newNumbers),
                 nextNumber = state.nextNumber - 1,
                 history = state.history.dropLast(1),
-                isReady = false
+                isReady = false,
+                isWaitingForOpponent = false
             )
         }
     }
@@ -83,6 +111,7 @@ class BoardSetupViewModel(
                 nextNumber = 26,
                 history = emptyList(), // Randomize is a bulk action, clear history
                 isReady = true,
+                isWaitingForOpponent = false,
                 error = null
             )
         }
@@ -102,7 +131,8 @@ class BoardSetupViewModel(
                 board = board,
                 nextNumber = history.size + 1,
                 history = history,
-                isReady = history.size == 25
+                isReady = history.size == 25,
+                isWaitingForOpponent = false
             )
         }
     }

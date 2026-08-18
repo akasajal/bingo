@@ -174,6 +174,53 @@ class FirebaseGameDataSource(
         return resultRoom ?: throw Exception("Transaction failed")
     }
 
+    suspend fun playAgain(roomId: String, requestingPlayerId: String): GameRoom {
+        val roomRef = roomsCollection.document(roomId)
+        var resultRoom: GameRoom? = null
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(roomRef)
+            val room = snapshot.toObject(GameRoom::class.java)
+                ?: throw Exception("Room not found")
+
+            if (!room.players.containsKey(requestingPlayerId)) {
+                throw Exception("Player not found in room")
+            }
+            if (room.status == GameStatus.BOARD_SETUP) {
+                resultRoom = room
+                return@runTransaction
+            }
+            if (room.status != GameStatus.FINISHED) {
+                throw Exception("Game is not finished yet")
+            }
+
+            val resetPlayers = room.players.mapValues { (_, player) ->
+                player.copy(
+                    isReady = false,
+                    bingoProgress = 0,
+                    completedLines = emptyList()
+                )
+            }
+
+            val resetRoom = room.copy(
+                status = GameStatus.BOARD_SETUP,
+                players = resetPlayers,
+                currentTurnPlayerId = "",
+                calledNumbers = emptyList(),
+                callerMap = emptyMap(),
+                winnerPlayerId = null
+            )
+
+            room.players.keys.forEach { playerId ->
+                transaction.delete(roomRef.collection("boards").document(playerId))
+            }
+            transaction.set(roomRef, resetRoom)
+            resultRoom = resetRoom
+        }.await()
+
+        return resultRoom ?: throw Exception("Transaction failed")
+    }
+
     suspend fun updateRoom(room: GameRoom) {
         roomsCollection.document(room.id).set(room).await()
     }
@@ -183,6 +230,13 @@ class FirebaseGameDataSource(
         firestore.collection("rooms").document(roomId)
             .collection("boards").document(playerId)
             .set(board).await()
+    }
+
+    suspend fun getBoardOnce(roomId: String, playerId: String): BingoBoard? {
+        return firestore.collection("rooms").document(roomId)
+            .collection("boards").document(playerId)
+            .get().await()
+            .toObject(BingoBoard::class.java)
     }
 
     fun getBoard(roomId: String, playerId: String): Flow<BingoBoard?> {

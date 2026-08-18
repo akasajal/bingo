@@ -1,13 +1,13 @@
 package com.ishaan.bingo.ui.screens.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,19 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.components.BingoGridOverlay
 import com.ishaan.bingo.ui.theme.bingoColors
 import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.theme.HapticManager
+import kotlinx.coroutines.delay
 
 @Composable
 fun GameScreen(
@@ -49,9 +51,12 @@ fun GameScreen(
 
     // For double-tap confirmation
     var selectedNumber by remember { mutableStateOf<Int?>(null) }
+    var resultHandled by remember(roomId) { mutableStateOf(false) }
 
     LaunchedEffect(room?.status, room?.winnerPlayerId) {
-        if (room?.status == GameStatus.FINISHED && room.winnerPlayerId != null) {
+        if (!resultHandled && room?.status == GameStatus.FINISHED && room.winnerPlayerId != null) {
+            resultHandled = true
+            delay(650)
             onGameFinished(room.winnerPlayerId)
         }
     }
@@ -97,22 +102,25 @@ fun GameScreen(
         // Turn Indicator Card
         val isMyTurn = room?.currentTurnPlayerId == viewModel.repository.playerId
         val isPlaying = room?.status == GameStatus.PLAYING
+        val turnContainerColor by animateColorAsState(
+            targetValue = when {
+                !isPlaying -> MaterialTheme.colorScheme.surfaceVariant
+                isMyTurn -> MaterialTheme.colorScheme.primaryContainer
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            },
+            animationSpec = tween(durationMillis = 180),
+            label = "turnContainerColor"
+        )
 
         Card(
-            colors = CardDefaults.cardColors(
-                containerColor = when {
-                    !isPlaying -> MaterialTheme.colorScheme.surfaceVariant
-                    isMyTurn -> MaterialTheme.colorScheme.primaryContainer
-                    else -> MaterialTheme.colorScheme.surfaceVariant
-                }
-            ),
+            colors = CardDefaults.cardColors(containerColor = turnContainerColor),
             shape = MaterialTheme.shapes.medium
         ) {
             Text(
                 text = when {
-                    !isPlaying -> "⌛ WAITING FOR OPPONENT..."
-                    isMyTurn -> "⚡ YOUR TURN"
-                    else -> "⌛ OPPONENT'S TURN"
+                    !isPlaying -> "WAITING FOR OPPONENT"
+                    isMyTurn -> "YOUR TURN"
+                    else -> "OPPONENT'S TURN"
                 },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.titleMedium,
@@ -128,6 +136,9 @@ fun GameScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 5x5 Board with Strikethrough Overlay
+        val calledNumbers = remember(room?.calledNumbers) {
+            room?.calledNumbers?.toSet().orEmpty()
+        }
         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -135,65 +146,24 @@ fun GameScreen(
                 .background(MaterialTheme.bingoColors.board, MaterialTheme.shapes.medium)
                 .padding(8.dp)
             ) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    userScrollEnabled = false
-                ) {
-                    items(25) { index ->
-                        val number = board?.numbers?.get(index)
-                        val isCalled = number != null && room?.calledNumbers?.contains(number) == true
-                        val isSelected = number != null && selectedNumber == number
-
-                        Box(
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(
-                                    color = when {
-                                        isCalled -> MaterialTheme.bingoColors.calledCell
-                                        isSelected -> MaterialTheme.colorScheme.secondaryContainer
-                                        else -> MaterialTheme.bingoColors.cell
-                                    }
-                                )
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.secondary
-                                    else MaterialTheme.colorScheme.outlineVariant,
-                                    shape = MaterialTheme.shapes.small
-                                )
-                                .clickable(enabled = isMyTurn && !isCalled && number != null) {
-                                    number?.let { n ->
-                                        if (hapticsEnabled) hapticManager.performTick()
-                                        if (!confirmCalls) {
-                                            viewModel.callNumber(n)
-                                        } else {
-                                            if (selectedNumber == n) {
-                                                viewModel.callNumber(n)
-                                                selectedNumber = null
-                                            } else {
-                                                selectedNumber = n
-                                            }
-                                        }
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (number != null) {
-                                Text(
-                                    text = number.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                                    color = if (isCalled) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                BingoGameBoard(
+                    board = board,
+                    calledNumbers = calledNumbers,
+                    selectedNumber = selectedNumber,
+                    isMyTurn = isMyTurn && !uiState.isCallingNumber,
+                    onNumberClick = { n ->
+                        if (hapticsEnabled) hapticManager.performTick()
+                        if (!confirmCalls) {
+                            viewModel.callNumber(n)
+                        } else if (selectedNumber == n) {
+                            viewModel.callNumber(n)
+                            selectedNumber = null
+                        } else {
+                            selectedNumber = n
                         }
-                    }
-                }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 // Strikethrough Overlay
                 myPlayer?.let { player ->
@@ -218,38 +188,10 @@ fun GameScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 val history = room?.calledNumbers?.reversed() ?: emptyList()
-                val historyText = buildAnnotatedString {
-                    history.forEachIndexed { index, number ->
-                        val callerId = room?.callerMap?.get(number.toString())
-                        val isMe = callerId == viewModel.repository.playerId
-
-                        if (isMe) {
-                            withStyle(style = SpanStyle(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
-                            )) {
-                                append(number.toString())
-                            }
-                        } else {
-                            withStyle(style = SpanStyle(
-                                color = MaterialTheme.colorScheme.outline,
-                                fontWeight = FontWeight.Normal,
-                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                            )) {
-                                append(number.toString())
-                            }
-                        }
-
-                        if (index < history.size - 1) {
-                            withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))) {
-                                append("  ·  ")
-                            }
-                        }
-                    }
-                    if (history.isEmpty()) {
-                        append("No numbers called yet")
-                    }
+                val callerMap = room?.callerMap.orEmpty()
+                val playerId = viewModel.repository.playerId
+                val historyText = remember(history, callerMap, playerId) {
+                    buildCallHistoryText(history, callerMap, playerId)
                 }
 
                 Text(
@@ -280,6 +222,108 @@ fun GameScreen(
                 label = "Opponent Calls",
                 isMe = false
             )
+        }
+    }
+}
+
+@Composable
+private fun BingoGameBoard(
+    board: BingoBoard?,
+    calledNumbers: Set<Int>,
+    selectedNumber: Int?,
+    isMyTurn: Boolean,
+    onNumberClick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        repeat(5) { row ->
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(5) { column ->
+                    val index = row * 5 + column
+                    val number = board?.numbers?.get(index)
+                    val isCalled = number != null && number in calledNumbers
+                    val isSelected = number != null && selectedNumber == number
+                    val cellColor by animateColorAsState(
+                        targetValue = when {
+                            isCalled -> MaterialTheme.bingoColors.calledCell
+                            isSelected -> MaterialTheme.colorScheme.secondaryContainer
+                            else -> MaterialTheme.bingoColors.cell
+                        },
+                        animationSpec = tween(durationMillis = 140),
+                        label = "cellColor"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(MaterialTheme.shapes.small)
+                            .background(cellColor)
+                            .border(
+                                width = if (isSelected) 3.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.secondary
+                                else MaterialTheme.colorScheme.outlineVariant,
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .clickable(enabled = isMyTurn && !isCalled && number != null) {
+                                number?.let(onNumberClick)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (number != null) {
+                            Text(
+                                text = number.toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                                color = if (isCalled) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun buildCallHistoryText(
+    history: List<Int>,
+    callerMap: Map<String, String>,
+    playerId: String
+): AnnotatedString {
+    return buildAnnotatedString {
+        history.forEachIndexed { index, number ->
+            val callerId = callerMap[number.toString()]
+            val isMe = callerId == playerId
+
+            if (isMe) {
+                withStyle(style = SpanStyle(
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                )) {
+                    append(number.toString())
+                }
+            } else {
+                withStyle(style = SpanStyle(
+                    fontWeight = FontWeight.Normal,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )) {
+                    append(number.toString())
+                }
+            }
+
+            if (index < history.size - 1) {
+                append("  ·  ")
+            }
+        }
+        if (history.isEmpty()) {
+            append("No numbers called yet")
         }
     }
 }

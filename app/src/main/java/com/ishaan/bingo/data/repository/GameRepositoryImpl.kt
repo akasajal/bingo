@@ -28,6 +28,10 @@ class GameRepositoryImpl(
         }
     }
 
+    override suspend fun prepareSession(): Result<Unit> = runCatching {
+        ensureAuthenticated()
+    }
+
     override fun getGameRoom(roomId: String): Flow<GameRoom?> = dataSource.getGameRoom(roomId)
 
     override fun getPlayerBoard(roomId: String): Flow<BingoBoard?> = dataSource.getBoard(roomId, playerId)
@@ -85,9 +89,14 @@ class GameRepositoryImpl(
             gameEngine = gameEngine,
             getBoards = { playerIds ->
                 playerIds.associateWith { id ->
-                    dataSource.getBoard(roomId, id).first() ?: BingoBoard()
+                    dataSource.getBoardOnce(roomId, id) ?: BingoBoard()
                 }
             }
         )
+    }
+
+    override suspend fun playAgain(roomId: String): Result<Unit> = runCatching {
+        ensureAuthenticated()
+        dataSource.playAgain(roomId, playerId)
     }
 }

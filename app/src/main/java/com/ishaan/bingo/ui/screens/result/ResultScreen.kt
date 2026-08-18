@@ -5,8 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -22,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameRoom
+import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.ui.AppViewModelProvider
 import com.ishaan.bingo.ui.components.BingoGridOverlay
 import com.ishaan.bingo.ui.theme.bingoColors
@@ -29,14 +28,35 @@ import com.ishaan.bingo.ui.theme.bingoColors
 @Composable
 fun ResultScreen(
     roomId: String,
-    onPlayAgain: () -> Unit,
+    onHome: () -> Unit,
+    onPlayAgainReady: () -> Unit,
     viewModel: ResultViewModel = viewModel(factory = AppViewModelProvider.resultViewModelFactory(roomId))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val room = uiState.gameRoom ?: return
+    var playAgainNavigationHandled by remember(roomId) { mutableStateOf(false) }
 
-    // Block system back on result screen — the only exit is Play Again
-    BackHandler { /* intentionally consumed — use Play Again button */ }
+    LaunchedEffect(room.status) {
+        if (!playAgainNavigationHandled && room.status == GameStatus.BOARD_SETUP) {
+            playAgainNavigationHandled = true
+            onPlayAgainReady()
+        }
+    }
+
+    if (uiState.error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearError() },
+            title = { Text("Could not play again") },
+            text = { Text(uiState.error.orEmpty()) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    BackHandler { onHome() }
     val isWinner = room.winnerPlayerId == viewModel.myPlayerId
 
     val currentBoard = if (uiState.showingOpponentBoard) uiState.opponentBoard else uiState.myBoard
@@ -115,41 +135,11 @@ fun ResultScreen(
                 .background(MaterialTheme.bingoColors.board, MaterialTheme.shapes.medium)
                 .padding(8.dp)
             ) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    userScrollEnabled = false
-                ) {
-                    items(25) { index ->
-                        val number = currentBoard?.numbers?.get(index)
-                        val isCalled = number != null && room.calledNumbers.contains(number)
-
-                        Box(
-                            modifier = Modifier
-                                .aspectRatio(1f)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(
-                                    color = if (isCalled) MaterialTheme.bingoColors.calledCell
-                                    else MaterialTheme.bingoColors.cell
-                                )
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (number != null) {
-                                Text(
-                                    text = number.toString(),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isCalled) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-                }
+                ResultBoard(
+                    board = currentBoard,
+                    calledNumbers = remember(room.calledNumbers) { room.calledNumbers.toSet() },
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 // Strikethrough Overlay for revealed board
                 viewingPlayer?.let { player ->
@@ -164,14 +154,85 @@ fun ResultScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = onPlayAgain,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = MaterialTheme.shapes.medium
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("PLAY AGAIN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            OutlinedButton(
+                onClick = onHome,
+                modifier = Modifier.weight(1f).height(56.dp),
+                shape = MaterialTheme.shapes.medium,
+                enabled = !uiState.isPlayingAgain
+            ) {
+                Text("HOME", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+
+            Button(
+                onClick = { viewModel.playAgain() },
+                modifier = Modifier.weight(1f).height(56.dp),
+                shape = MaterialTheme.shapes.medium,
+                enabled = !uiState.isPlayingAgain
+            ) {
+                if (uiState.isPlayingAgain) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("PLAY AGAIN", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ResultBoard(
+    board: BingoBoard?,
+    calledNumbers: Set<Int>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        repeat(5) { row ->
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(5) { column ->
+                    val index = row * 5 + column
+                    val number = board?.numbers?.get(index)
+                    val isCalled = number != null && number in calledNumbers
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(MaterialTheme.shapes.small)
+                            .background(
+                                color = if (isCalled) MaterialTheme.bingoColors.calledCell
+                                else MaterialTheme.bingoColors.cell
+                            )
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (number != null) {
+                            Text(
+                                text = number.toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isCalled) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
