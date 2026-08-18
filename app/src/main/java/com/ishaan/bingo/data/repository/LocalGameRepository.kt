@@ -34,21 +34,26 @@ class LocalGameRepository(
         boards.keys.firstOrNull { it != playerId }?.let { boards[it] }
     }
 
-    override suspend fun createRoom(): Result<GameRoom> {
-        val room = GameRoom(
+    override fun createRoomDraft(): GameRoom = GameRoom(
+        id = "mock-room",
+        code = "DEBUG",
+        status = GameStatus.WAITING_FOR_PLAYER
+    )
+
+    override suspend fun createRoom(room: GameRoom): Result<GameRoom> {
+        val roomWithCreator = room.copy(
             id = "mock-room",
             code = "DEBUG",
-            status = GameStatus.WAITING_FOR_PLAYER,
             players = mapOf(playerId to Player(id = playerId, name = "You"))
         )
-        _room.value = room
+        _room.value = roomWithCreator
 
         // Auto-join a second player after a short delay to simulate "waiting"
         kotlinx.coroutines.delay(1000)
         joinRoom("DEBUG")
 
         // Fix: return the current (updated) room state, not the stale initial snapshot
-        return Result.success(_room.value ?: room)
+        return Result.success(_room.value ?: roomWithCreator)
     }
 
     override suspend fun joinRoom(code: String): Result<GameRoom> {

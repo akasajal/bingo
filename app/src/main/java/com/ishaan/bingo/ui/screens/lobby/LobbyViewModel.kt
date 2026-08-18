@@ -29,19 +29,40 @@ class LobbyViewModel(
 
     // Track the observer job so we can cancel it before starting a new game
     private var roomObserverJob: Job? = null
+    private var roomCreationJob: Job? = null
 
     fun createGame() {
         // Cancel any leftover observer from a previous session before starting fresh
         roomObserverJob?.cancel()
         roomObserverJob = null
+        roomCreationJob?.cancel()
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            repository.createRoom().onSuccess { room ->
-                _uiState.update { it.copy(isLoading = false, joinedRoomId = room.id, gameCode = room.code) }
+        // Generating a room ID and share code is local and should never wait on Firebase.
+        val roomDraft = repository.createRoomDraft()
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                error = null,
+                joinedRoomId = roomDraft.id,
+                gameCode = roomDraft.code
+            )
+        }
+
+        roomCreationJob = viewModelScope.launch {
+            repository.createRoom(roomDraft).onSuccess { room ->
+                if (_uiState.value.joinedRoomId != roomDraft.id) return@onSuccess
+                _uiState.update { it.copy(isLoading = false) }
                 observeRoomForCreator(room.id)
-            }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, error = error.message) }
+            }.onFailure {
+                if (_uiState.value.joinedRoomId != roomDraft.id) return@onFailure
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        gameCode = "",
+                        joinedRoomId = null,
+                        error = "We couldn't create your game. Check your internet connection and try again."
+                    )
+                }
             }
         }
     }
@@ -75,7 +96,7 @@ class LobbyViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            localRepo.createRoom().onSuccess { room ->
+            localRepo.createRoom(localRepo.createRoomDraft()).onSuccess { room ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -108,6 +129,8 @@ class LobbyViewModel(
         // Cancel any in-flight room observer so it can't update state after reset
         roomObserverJob?.cancel()
         roomObserverJob = null
+        roomCreationJob?.cancel()
+        roomCreationJob = null
         _uiState.update { LobbyUiState() }
     }
 }

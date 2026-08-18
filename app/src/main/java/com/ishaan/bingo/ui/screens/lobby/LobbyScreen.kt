@@ -60,13 +60,15 @@ fun LobbyScreen(
                         )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
-                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Waiting for opponent...",
+                        if (uiState.isLoading) "Creating game..." else "Waiting for opponent...",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (uiState.isLoading) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+                    }
                 }
             },
             confirmButton = {},
@@ -74,6 +76,17 @@ fun LobbyScreen(
                 TextButton(onClick = { viewModel.resetLobby() }) {
                     Text("CANCEL", color = MaterialTheme.colorScheme.error)
                 }
+            }
+        )
+    }
+
+    uiState.error?.let { error ->
+        AlertDialog(
+            onDismissRequest = viewModel::clearError,
+            title = { Text("Something went wrong") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearError) { Text("OK") }
             }
         )
     }
@@ -150,10 +163,6 @@ fun LobbyScreen(
                 CircularProgressIndicator()
             }
 
-            uiState.error?.let { error ->
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-            }
         }
 
         Surface(

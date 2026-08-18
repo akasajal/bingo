@@ -44,10 +44,14 @@ class GameRepositoryImpl(
         }
     }
 
-    override suspend fun createRoom(): Result<GameRoom> = runCatching {
+    override fun createRoomDraft(): GameRoom = dataSource.createRoomDraft()
+
+    override suspend fun createRoom(room: GameRoom): Result<GameRoom> = runCatching {
         ensureAuthenticated()
         val creator = Player(id = playerId, name = "Player 1")
-        dataSource.createRoom(creatorPlayer = creator)
+        val roomWithCreator = room.copy(players = mapOf(creator.id to creator))
+        dataSource.createRoom(roomWithCreator)
+        roomWithCreator
     }
 
     override suspend fun joinRoom(code: String): Result<GameRoom> = runCatching {
