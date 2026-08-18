@@ -140,7 +140,10 @@ fun LobbyScreen(
 
             OutlinedTextField(
                 value = joinCode,
-                onValueChange = { joinCode = it.uppercase() },
+                onValueChange = { 
+                    joinCode = it.uppercase()
+                    viewModel.onCodeInputChanged(joinCode)
+                },
                 label = { Text("Game Code") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,

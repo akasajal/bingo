@@ -93,10 +93,12 @@ class GameViewModel(
         if (currentRoom.currentTurnPlayerId != repository.playerId) return
 
         // Optimistic update — reflect the call instantly in the UI
-        // Fix #3: Removed optimistic turn flip to avoid race conditions with server response
         val optimisticRoom = currentRoom.copy(
             calledNumbers = currentRoom.calledNumbers + number,
-            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId)
+            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
+            // Fix #3: Restore optimistic turn flip for snappier UI
+            currentTurnPlayerId = currentRoom.players.keys
+                .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
         )
         _uiState.update { it.copy(gameRoom = optimisticRoom, error = null) }
 

@@ -94,6 +94,15 @@ class LobbyViewModel(
         }
     }
 
+    fun onCodeInputChanged(code: String) {
+        if (code.length == 5) {
+            // Pre-warm the session when the code hits full length
+            viewModelScope.launch {
+                repository.prepareSession()
+            }
+        }
+    }
+
     fun playWithBot() {
         roomObserverJob?.cancel()
         roomObserverJob = null
