@@ -158,27 +158,36 @@ class FirebaseGameDataSource(
         claimWin: Boolean
     ) {
         val docRef = roomsCollection.document(roomId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(docRef)
-            val room = snapshot.toObject(GameRoom::class.java) ?: return@runTransaction
+        
+        if (!claimWin) {
+            // High-speed direct update (No "Get" round trip required)
+            docRef.update(
+                "players.$playerId.bingoProgress", progress,
+                "players.$playerId.completedLines", completedLines
+            ).await()
+        } else {
+            // Authoritative win claim — use transaction to ensure only one winner is set
+            firestore.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                val room = snapshot.toObject(GameRoom::class.java) ?: return@runTransaction
 
-            val updatedPlayers = room.players.toMutableMap()
-            val player = updatedPlayers[playerId] ?: return@runTransaction
-            
-            updatedPlayers[playerId] = player.copy(
-                bingoProgress = progress,
-                completedLines = completedLines
-            )
+                if (room.winnerPlayerId == null) {
+                    val updatedPlayers = room.players.toMutableMap()
+                    val player = updatedPlayers[playerId] ?: return@runTransaction
+                    
+                    updatedPlayers[playerId] = player.copy(
+                        bingoProgress = progress,
+                        completedLines = completedLines
+                    )
 
-            val winnerId = if (claimWin) playerId else room.winnerPlayerId
-            val newStatus = if (claimWin) GameStatus.FINISHED else room.status
-
-            transaction.update(docRef, mapOf(
-                "players" to updatedPlayers,
-                "winnerPlayerId" to winnerId,
-                "status" to newStatus
-            ))
-        }.await()
+                    transaction.update(docRef, mapOf(
+                        "players" to updatedPlayers,
+                        "winnerPlayerId" to playerId,
+                        "status" to GameStatus.FINISHED
+                    ))
+                }
+            }.await()
+        }
     }
 
     suspend fun playAgain(roomId: String, requestingPlayerId: String): GameRoom {

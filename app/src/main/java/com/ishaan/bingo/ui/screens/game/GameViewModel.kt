@@ -64,18 +64,22 @@ class GameViewModel(
                 val detectedLines = lineDetector.detectCompletedLines(board.numbers, calledNumbers.toSet())
                 val currentCompletedLines = myPlayer.completedLines.toSet()
                 
+                // Only sync if we have actually found new lines not yet on the server
                 val newlyCompletedLines = detectedLines - currentCompletedLines
                 
                 if (newlyCompletedLines.isNotEmpty()) {
                     val newProgress = (myPlayer.bingoProgress + newlyCompletedLines.size).coerceAtMost(5)
-                    val claimWin = newProgress >= 5
-                    
-                    repository.syncMyProgress(
-                        roomId = roomId,
-                        progress = newProgress,
-                        completedLines = detectedLines.toList(),
-                        claimWin = claimWin
-                    )
+                    // Double check we aren't re-syncing the same progress
+                    if (newProgress > myPlayer.bingoProgress) {
+                        val claimWin = newProgress >= 5
+                        
+                        repository.syncMyProgress(
+                            roomId = roomId,
+                            progress = newProgress,
+                            completedLines = detectedLines.toList(),
+                            claimWin = claimWin
+                        )
+                    }
                 }
             }.collect()
         }
