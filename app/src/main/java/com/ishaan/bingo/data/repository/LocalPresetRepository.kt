@@ -1,43 +1,46 @@
 package com.ishaan.bingo.data.repository
 
+import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.PresetBoard
 import com.ishaan.bingo.domain.repository.PresetBoardRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.map
 
-class LocalPresetRepository : PresetBoardRepository {
-    private val _presets = MutableStateFlow<List<PresetBoard>>(emptyList())
-    val presets = _presets.asStateFlow()
+class LocalPresetRepository(private val db: BingoDatabase) : PresetBoardRepository {
 
-    override fun getPresetBoards(): Flow<List<PresetBoard>> = presets
+    private val dao = db.presetBoardDao()
+
+    override fun getPresetBoards(): Flow<List<PresetBoard>> =
+        dao.getAllPresets().map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun addPresetBoard(preset: PresetBoard): Result<Unit> = runCatching {
-        if (_presets.value.size >= 6) {
-            throw Exception("Maximum 6 presets allowed")
-        }
-        
-        val isDuplicate = _presets.value.any { it.board.numbers == preset.board.numbers }
-        if (isDuplicate) {
+        if (dao.getCount() >= 6) throw Exception("Maximum 6 presets allowed")
+        val newNumbers = preset.board.numbers.joinToString(",")
+        if (dao.getAllNumbers().any { it == newNumbers })
             throw Exception("This board arrangement already exists as a preset")
-        }
-
-        _presets.update { it + preset }
+        dao.insert(preset.toEntity())
     }
 
     override suspend fun updatePresetBoard(preset: PresetBoard): Result<Unit> = runCatching {
-        val conflict = _presets.value.any { it.id != preset.id && it.board.numbers == preset.board.numbers }
-        if (conflict) {
+        val updatedNumbers = preset.board.numbers.joinToString(",")
+        if (dao.getAllNumbersExcluding(preset.id).any { it == updatedNumbers })
             throw Exception("This arrangement already exists in another preset")
-        }
-
-        _presets.update { list ->
-            list.map { if (it.id == preset.id) preset else it }
-        }
+        dao.update(preset.toEntity())
     }
 
     override suspend fun deletePresetBoard(id: String): Result<Unit> = runCatching {
-        _presets.update { list -> list.filter { it.id != id } }
+        dao.deleteById(id)
     }
+
+    private fun PresetBoardEntity.toDomain() = PresetBoard(
+        id = id,
+        name = name,
+        board = BingoBoard(numbers.split(",").map { it.toInt() })
+    )
+
+    private fun PresetBoard.toEntity() = PresetBoardEntity(
+        id = id,
+        name = name,
+        numbers = board.numbers.joinToString(",")
+    )
 }

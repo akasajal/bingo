@@ -1,50 +1,41 @@
 package com.ishaan.bingo.ui
 
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.ishaan.bingo.data.remote.FirebaseGameDataSource
+import com.ishaan.bingo.data.repository.BingoDatabase
 import com.ishaan.bingo.data.repository.GameRepositoryImpl
+import com.ishaan.bingo.data.repository.LocalGameRepository
+import com.ishaan.bingo.data.repository.LocalPresetRepository
 import com.ishaan.bingo.ui.screens.game.GameViewModel
 import com.ishaan.bingo.ui.screens.lobby.LobbyViewModel
-import com.ishaan.bingo.ui.screens.setup.BoardSetupViewModel
+import com.ishaan.bingo.ui.screens.result.ResultViewModel
 import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.screens.settings.presets.PresetViewModel
-import com.ishaan.bingo.ui.screens.result.ResultViewModel
-import com.ishaan.bingo.data.repository.LocalPresetRepository
+import com.ishaan.bingo.ui.screens.setup.BoardSetupViewModel
 
 object AppViewModelProvider {
-    // Switch to GameRepositoryImpl for actual 1v1 multiplayer
     val repository = GameRepositoryImpl(FirebaseGameDataSource())
-    // val repository = com.ishaan.bingo.data.repository.LocalGameRepository()
+    val botRepository = LocalGameRepository()
     val settingsViewModel = SettingsViewModel()
-    val presetRepository = LocalPresetRepository()
+    lateinit var presetRepository: LocalPresetRepository
+
+    fun init(db: BingoDatabase) {
+        presetRepository = LocalPresetRepository(db)
+    }
 
     val Factory = viewModelFactory {
-        initializer {
-            LobbyViewModel(repository)
-        }
-        initializer {
-            BoardSetupViewModel(repository)
-        }
-        initializer {
-            settingsViewModel
-        }
-        initializer {
-            PresetViewModel(presetRepository)
-        }
+        initializer { LobbyViewModel(repository) }
+        initializer { BoardSetupViewModel(repository) }
+        initializer { settingsViewModel }
+        initializer { PresetViewModel(presetRepository) }
     }
 
-    fun gameViewModelFactory(roomId: String) = viewModelFactory {
-        initializer {
-            GameViewModel(repository, roomId)
-        }
+    fun gameViewModelFactory(roomId: String, isBot: Boolean = false) = viewModelFactory {
+        initializer { GameViewModel(if (isBot) botRepository else repository, roomId) }
     }
 
-    fun resultViewModelFactory(roomId: String) = viewModelFactory {
-        initializer {
-            ResultViewModel(repository, roomId)
-        }
+    fun resultViewModelFactory(roomId: String, isBot: Boolean = false) = viewModelFactory {
+        initializer { ResultViewModel(if (isBot) botRepository else repository, roomId) }
     }
 }

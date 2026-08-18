@@ -16,7 +16,7 @@ import com.ishaan.bingo.ui.AppViewModelProvider
 
 @Composable
 fun LobbyScreen(
-    onGameJoined: (String) -> Unit,
+    onGameJoined: (roomId: String, isBot: Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: LobbyViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -25,16 +25,16 @@ fun LobbyScreen(
 
     LaunchedEffect(uiState.shouldNavigateToSetup, uiState.joinedRoomId) {
         if (uiState.shouldNavigateToSetup) {
-            uiState.joinedRoomId?.let { onGameJoined(it) }
+            uiState.joinedRoomId?.let { onGameJoined(it, uiState.isBotGame) }
         }
     }
 
-    if (uiState.gameCode.isNotBlank() && !uiState.shouldNavigateToSetup) {
+    if (uiState.gameCode.isNotBlank() && !uiState.shouldNavigateToSetup && !uiState.isBotGame) {
         AlertDialog(
             onDismissRequest = { viewModel.resetLobby() },
-            title = { 
+            title = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("Game Created!", fontWeight = FontWeight.Bold) 
+                    Text("Game Created!", fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -42,10 +42,7 @@ fun LobbyScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        "Share this code with your friend:",
-                        textAlign = TextAlign.Center
-                    )
+                    Text("Share this code with your friend:", textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer,
@@ -61,14 +58,10 @@ fun LobbyScreen(
                         )
                     }
                     Spacer(modifier = Modifier.height(32.dp))
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "Waiting for opponent...", 
+                        "Waiting for opponent...",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -85,21 +78,19 @@ fun LobbyScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
             Spacer(modifier = Modifier.height(48.dp))
-            
+
             Text(
-                text = "BINGO", 
+                text = "BINGO",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            
+
             Spacer(modifier = Modifier.height(64.dp))
 
             Button(
@@ -111,8 +102,19 @@ fun LobbyScreen(
                 Text("CREATE NEW GAME", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { viewModel.playWithBot() },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                enabled = !uiState.isLoading,
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("PLAY VS BOT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 HorizontalDivider(modifier = Modifier.weight(1f))
                 Text("  OR JOIN  ", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.outline)
@@ -152,14 +154,10 @@ fun LobbyScreen(
             }
         }
 
-        // Settings Button in bottom corner
         Surface(
             onClick = onSettingsClick,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp)
-                .size(56.dp),
-            shape = RoundedCornerShape(percent = 40), // More distinct Squircle
+            modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp).size(56.dp),
+            shape = RoundedCornerShape(percent = 40),
             color = MaterialTheme.colorScheme.secondaryContainer,
             tonalElevation = 4.dp,
             shadowElevation = 2.dp
