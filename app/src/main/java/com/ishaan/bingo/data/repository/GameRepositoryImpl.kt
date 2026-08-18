@@ -15,7 +15,6 @@ import java.util.UUID
 
 class GameRepositoryImpl(
     private val dataSource: FirebaseGameDataSource,
-    private val gameEngine: BingoGameEngine = BingoGameEngine(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : GameRepository {
 
@@ -76,29 +75,27 @@ class GameRepositoryImpl(
     }
 
     /**
-     * Fix #1: Turn ownership and duplicate-call checks are now enforced inside a
-     * Firestore transaction in the data source, so a player cannot write a move
-     * on the opponent's turn even by calling the function directly.
+     * Optimized Move Flow:
+     * We only update calledNumbers and flip turn. 
+     * Local progress calculation happens in the ViewModel.
      */
-    override suspend fun callNumber(roomId: String, playerIds: Set<String>, number: Int): Result<Unit> = runCatching {
+    override suspend fun callNumber(roomId: String, number: Int): Result<Unit> = runCatching {
         ensureAuthenticated()
-        
-        // Parallelize board fetching to minimize latency
-        val boards = kotlinx.coroutines.coroutineScope {
-            playerIds.map { id ->
-                async {
-                    id to (dataSource.getBoardOnce(roomId, id) ?: BingoBoard())
-                }
-            }.awaitAll().toMap()
-        }
-
-        dataSource.callNumberTransactional(
+        dataSource.callNumberSimple(
             roomId = roomId,
             callingPlayerId = playerId,
-            number = number,
-            gameEngine = gameEngine,
-            boards = boards
+            number = number
         )
+    }
+
+    override suspend fun syncMyProgress(
+        roomId: String, 
+        progress: Int, 
+        completedLines: List<String>, 
+        claimWin: Boolean
+    ): Result<Unit> = runCatching {
+        ensureAuthenticated()
+        dataSource.updatePlayerProgress(roomId, playerId, progress, completedLines, claimWin)
     }
 
     override suspend fun playAgain(roomId: String): Result<Unit> = runCatching {

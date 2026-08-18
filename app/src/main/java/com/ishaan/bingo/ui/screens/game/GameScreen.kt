@@ -19,7 +19,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ishaan.bingo.domain.model.BingoBoard
@@ -190,8 +192,11 @@ fun GameScreen(
                 val history = room?.calledNumbers?.reversed() ?: emptyList()
                 val callerMap = room?.callerMap.orEmpty()
                 val playerId = viewModel.repository.playerId
-                val historyText = remember(history, callerMap, playerId) {
-                    buildCallHistoryText(history, callerMap, playerId)
+                val myColor = MaterialTheme.colorScheme.primary
+                val opponentColor = MaterialTheme.colorScheme.outline
+                
+                val historyText = remember(history, callerMap, playerId, myColor, opponentColor) {
+                    buildCallHistoryText(history, callerMap, playerId, myColor, opponentColor)
                 }
 
                 Text(
@@ -295,7 +300,9 @@ private fun BingoGameBoard(
 private fun buildCallHistoryText(
     history: List<Int>,
     callerMap: Map<String, String>,
-    playerId: String
+    playerId: String,
+    myColor: Color,
+    opponentColor: Color
 ): AnnotatedString {
     return buildAnnotatedString {
         history.forEachIndexed { index, number ->
@@ -304,22 +311,26 @@ private fun buildCallHistoryText(
 
             if (isMe) {
                 withStyle(style = SpanStyle(
+                    color = myColor,
                     fontWeight = FontWeight.Bold,
-                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                    textDecoration = TextDecoration.Underline
                 )) {
                     append(number.toString())
                 }
             } else {
                 withStyle(style = SpanStyle(
+                    color = opponentColor,
                     fontWeight = FontWeight.Normal,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    fontStyle = FontStyle.Italic
                 )) {
                     append(number.toString())
                 }
             }
 
             if (index < history.size - 1) {
-                append("  ·  ")
+                withStyle(style = SpanStyle(color = opponentColor.copy(alpha = 0.6f))) {
+                    append("  ·  ")
+                }
             }
         }
         if (history.isEmpty()) {
@@ -340,15 +351,15 @@ fun LegendItem(color: Color, label: String, isMe: Boolean) {
         Text(
             text = buildAnnotatedString {
                 withStyle(style = SpanStyle(
+                    color = color,
                     fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal,
-                    fontStyle = if (isMe) androidx.compose.ui.text.font.FontStyle.Normal else androidx.compose.ui.text.font.FontStyle.Italic,
-                    textDecoration = if (isMe) androidx.compose.ui.text.style.TextDecoration.Underline else null
+                    fontStyle = if (isMe) FontStyle.Normal else FontStyle.Italic,
+                    textDecoration = if (isMe) TextDecoration.Underline else null
                 )) {
                     append(label)
                 }
             },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall
         )
     }
 }

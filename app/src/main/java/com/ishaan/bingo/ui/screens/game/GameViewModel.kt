@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameRoom
 import com.ishaan.bingo.domain.repository.GameRepository
+import com.ishaan.bingo.game.BingoLineDetector
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -18,7 +19,8 @@ data class GameUiState(
 
 class GameViewModel(
     val repository: GameRepository,
-    private val roomId: String
+    private val roomId: String,
+    private val lineDetector: BingoLineDetector = BingoLineDetector()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState(isLoading = true))
@@ -26,6 +28,7 @@ class GameViewModel(
 
     init {
         observeGame()
+        setupLocalProgressionSync()
     }
 
     private fun observeGame() {
@@ -42,27 +45,63 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Decentralized Sync Logic:
+     * We watch for changes in calledNumbers, calculate our own progress locally,
+     * and push it to the server if it has changed.
+     */
+    private fun setupLocalProgressionSync() {
+        viewModelScope.launch {
+            combine(
+                uiState.map { it.gameRoom?.calledNumbers }.distinctUntilChanged(),
+                uiState.map { it.playerBoard }.distinctUntilChanged()
+            ) { calledNumbers, board ->
+                if (calledNumbers == null || board == null) return@combine
+
+                val myPlayer = uiState.value.gameRoom?.players?.get(repository.playerId) ?: return@combine
+                
+                // Calculate actual progress based on current board and called numbers
+                val detectedLines = lineDetector.detectCompletedLines(board.numbers, calledNumbers.toSet())
+                val currentCompletedLines = myPlayer.completedLines.toSet()
+                
+                val newlyCompletedLines = detectedLines - currentCompletedLines
+                
+                if (newlyCompletedLines.isNotEmpty()) {
+                    val newProgress = (myPlayer.bingoProgress + newlyCompletedLines.size).coerceAtMost(5)
+                    val claimWin = newProgress >= 5
+                    
+                    repository.syncMyProgress(
+                        roomId = roomId,
+                        progress = newProgress,
+                        completedLines = detectedLines.toList(),
+                        claimWin = claimWin
+                    )
+                }
+            }.collect()
+        }
+    }
+
     fun callNumber(number: Int) {
         if (_uiState.value.isCallingNumber) return
         val currentRoom = _uiState.value.gameRoom ?: return
+        if (currentRoom.currentTurnPlayerId != repository.playerId) return
 
         // Optimistic update — reflect the call instantly in the UI
         val optimisticRoom = currentRoom.copy(
             calledNumbers = currentRoom.calledNumbers + number,
             callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
-            // Flip turn optimistically so the UI stops showing "YOUR TURN" immediately
+            // Flip turn optimistically
             currentTurnPlayerId = currentRoom.players.keys
                 .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
         )
         _uiState.update { it.copy(gameRoom = optimisticRoom, isCallingNumber = true, error = null) }
 
         viewModelScope.launch {
-            repository.callNumber(roomId, currentRoom.players.keys, number)
+            repository.callNumber(roomId, number)
                 .onSuccess {
                     _uiState.update { it.copy(isCallingNumber = false) }
                 }
                 .onFailure { error ->
-                    // Roll back to the real server state on failure
                     _uiState.update {
                         it.copy(
                             gameRoom = currentRoom,

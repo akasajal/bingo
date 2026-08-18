@@ -2,12 +2,10 @@ package com.ishaan.bingo.data.remote
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.snapshots
-import com.google.firebase.firestore.Transaction
 import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameRoom
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.model.Player
-import com.ishaan.bingo.game.BingoGameEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
@@ -109,12 +107,10 @@ class FirebaseGameDataSource(
         return resultRoom ?: throw Exception("Transaction failed")
     }
 
-    suspend fun callNumberTransactional(
+    suspend fun callNumberSimple(
         roomId: String,
         callingPlayerId: String,
-        number: Int,
-        gameEngine: BingoGameEngine,
-        boards: Map<String, BingoBoard>
+        number: Int
     ): GameRoom {
         val docRef = roomsCollection.document(roomId)
         var resultRoom: GameRoom? = null
@@ -124,7 +120,6 @@ class FirebaseGameDataSource(
             val room = snapshot.toObject(GameRoom::class.java)
                 ?: throw Exception("Room not found")
 
-            // Authoritative validation inside the transaction
             if (room.status != GameStatus.PLAYING) {
                 throw Exception("Game is not in progress")
             }
@@ -135,12 +130,55 @@ class FirebaseGameDataSource(
                 throw Exception("Number already called")
             }
 
-            val updatedRoom = gameEngine.processCall(room, boards, number)
+            val newCalledNumbers = room.calledNumbers + number
+            val newCallerMap = room.callerMap + (number.toString() to callingPlayerId)
+            
+            // Flip turn
+            val playerIds = room.players.keys.toList()
+            val currentIndex = playerIds.indexOf(callingPlayerId)
+            val nextTurnPlayerId = playerIds[(currentIndex + 1) % playerIds.size]
+
+            val updatedRoom = room.copy(
+                calledNumbers = newCalledNumbers,
+                callerMap = newCallerMap,
+                currentTurnPlayerId = nextTurnPlayerId
+            )
             transaction.set(docRef, updatedRoom)
             resultRoom = updatedRoom
         }.await()
 
         return resultRoom ?: throw Exception("Transaction failed")
+    }
+
+    suspend fun updatePlayerProgress(
+        roomId: String,
+        playerId: String,
+        progress: Int,
+        completedLines: List<String>,
+        claimWin: Boolean
+    ) {
+        val docRef = roomsCollection.document(roomId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val room = snapshot.toObject(GameRoom::class.java) ?: return@runTransaction
+
+            val updatedPlayers = room.players.toMutableMap()
+            val player = updatedPlayers[playerId] ?: return@runTransaction
+            
+            updatedPlayers[playerId] = player.copy(
+                bingoProgress = progress,
+                completedLines = completedLines
+            )
+
+            val winnerId = if (claimWin) playerId else room.winnerPlayerId
+            val newStatus = if (claimWin) GameStatus.FINISHED else room.status
+
+            transaction.update(docRef, mapOf(
+                "players" to updatedPlayers,
+                "winnerPlayerId" to winnerId,
+                "status" to newStatus
+            ))
+        }.await()
     }
 
     suspend fun playAgain(roomId: String, requestingPlayerId: String): GameRoom {

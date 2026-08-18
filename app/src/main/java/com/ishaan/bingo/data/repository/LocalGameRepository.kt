@@ -100,19 +100,29 @@ class LocalGameRepository(
         return Result.success(Unit)
     }
 
-    override suspend fun callNumber(roomId: String, playerIds: Set<String>, number: Int): Result<Unit> {
+    override suspend fun callNumber(roomId: String, number: Int): Result<Unit> {
         val room = _room.value ?: return Result.failure(Exception("Room not found"))
         val boards = _boards.value
 
-        // Process your call
+        // Process your call using the engine locally
         val updatedRoom = gameEngine.processCall(room, boards, number)
         _room.value = updatedRoom
 
-        // If it's now Opponent's turn, simulate their move
+        // Simulate opponent move
         if (updatedRoom.status == GameStatus.PLAYING && updatedRoom.currentTurnPlayerId == player2Id) {
             simulateOpponentMove(updatedRoom, boards)
         }
 
+        return Result.success(Unit)
+    }
+
+    override suspend fun syncMyProgress(
+        roomId: String,
+        progress: Int,
+        completedLines: List<String>,
+        claimWin: Boolean
+    ): Result<Unit> {
+        // In local mode, progression is already calculated by the engine in callNumber
         return Result.success(Unit)
     }
 

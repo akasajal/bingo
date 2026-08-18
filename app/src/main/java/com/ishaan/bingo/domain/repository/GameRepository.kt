@@ -16,6 +16,7 @@ interface GameRepository {
     suspend fun createRoom(room: GameRoom): Result<GameRoom>
     suspend fun joinRoom(code: String): Result<GameRoom>
     suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit>
-    suspend fun callNumber(roomId: String, playerIds: Set<String>, number: Int): Result<Unit>
+    suspend fun callNumber(roomId: String, number: Int): Result<Unit>
+    suspend fun syncMyProgress(roomId: String, progress: Int, completedLines: List<String>, claimWin: Boolean): Result<Unit>
     suspend fun playAgain(roomId: String): Result<Unit>
 }
