@@ -27,7 +27,7 @@ fun CreatePresetScreen(
     presetId: String? = null,
     onBackClick: () -> Unit,
     onSaved: () -> Unit,
-    viewModel: BoardSetupViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    viewModel: BoardSetupViewModel = viewModel(factory = AppViewModelProvider.boardSetupViewModelFactory("", isBot = false)),
     presetViewModel: PresetViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,11 +49,11 @@ fun CreatePresetScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
-                        text = if (isEditMode) "Edit Preset" else "Create Preset", 
-                        fontWeight = FontWeight.Bold 
-                    ) 
+                        text = if (isEditMode) "Edit Preset" else "Create Preset",
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -104,11 +104,11 @@ fun CreatePresetScreen(
                             .aspectRatio(1f)
                             .clip(MaterialTheme.shapes.small)
                             .background(
-                                color = if (number != null) MaterialTheme.colorScheme.primaryContainer 
-                                        else MaterialTheme.bingoColors.cell
+                                color = if (number != null) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.bingoColors.cell
                             )
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
-                            .clickable { 
+                            .clickable {
                                 if (number == null) {
                                     viewModel.onCellClick(index)
                                 } else if (index == uiState.history.lastOrNull()) {
@@ -136,14 +136,14 @@ fun CreatePresetScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 OutlinedButton(
-                    onClick = { viewModel.undo() }, 
+                    onClick = { viewModel.undo() },
                     enabled = uiState.history.isNotEmpty(),
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("UNDO")
                 }
                 Button(
-                    onClick = { viewModel.delete() }, 
+                    onClick = { viewModel.delete() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -163,10 +163,10 @@ fun CreatePresetScreen(
             }
 
             Button(
-                onClick = { 
+                onClick = {
                     viewModel.saveAsPreset(
-                        name = presetName, 
-                        repository = AppViewModelProvider.presetRepository, 
+                        name = presetName,
+                        repository = AppViewModelProvider.presetRepository,
                         existingId = presetId,
                         onComplete = onSaved
                     )
@@ -175,7 +175,7 @@ fun CreatePresetScreen(
                 enabled = uiState.isReady
             ) {
                 Text(
-                    text = if (isEditMode) "UPDATE PRESET" else "SAVE PRESET", 
+                    text = if (isEditMode) "UPDATE PRESET" else "SAVE PRESET",
                     fontWeight = FontWeight.Bold
                 )
             }
