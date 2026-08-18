@@ -1,5 +1,5 @@
 package com.ishaan.bingo.domain.model
 
 enum class BotDifficulty {
-    EASY, HARD
+    EASY, HARD, TEE_HEE
 }

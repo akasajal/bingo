@@ -73,8 +73,12 @@ class LocalGameRepository(
         )
         _room.value = updatedRoom
 
-        // Auto-submit board for P2
-        val p2Board = BingoBoard((1..25).toList().shuffled())
+        // Auto-submit board for P2. In TEE-HEE mode, start with an empty board.
+        val p2Board = if (difficulty == BotDifficulty.TEE_HEE) {
+            BingoBoard(List(25) { null })
+        } else {
+            BingoBoard((1..25).toList().shuffled())
+        }
         _boards.update { it + (player2Id to p2Board) }
 
         return Result.success(updatedRoom)
@@ -82,7 +86,8 @@ class LocalGameRepository(
 
     override suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit> {
         _boards.update { boards ->
-            boards + (playerId to board) + (player2Id to (boards[player2Id] ?: BingoBoard((1..25).toList().shuffled())))
+            val p2Current = boards[player2Id] ?: BingoBoard((1..25).toList().shuffled())
+            boards + (playerId to board) + (player2Id to p2Current)
         }
 
         var firstTurnId = ""
@@ -113,8 +118,22 @@ class LocalGameRepository(
 
     override suspend fun callNumber(roomId: String, number: Int): Result<Unit> {
         val room = _room.value ?: return Result.failure(Exception("Room not found"))
-        val boards = _boards.value
+        
+        // Fix for TEE-HEE: Bot must place the user's called number first
+        if (difficulty == BotDifficulty.TEE_HEE) {
+            _boards.update { boards ->
+                val botBoard = boards[player2Id] ?: BingoBoard(List(25) { null })
+                val updatedBotBoard = botMoveStrategy.placeNumber(
+                    botBoard = botBoard,
+                    number = number,
+                    calledNumbers = room.calledNumbers.toSet(),
+                    difficulty = difficulty
+                )
+                boards + (player2Id to updatedBotBoard)
+            }
+        }
 
+        val boards = _boards.value
         // Process your call using the engine locally
         val updatedRoom = gameEngine.processCall(room, boards, number)
         _room.value = updatedRoom
@@ -181,7 +200,23 @@ class LocalGameRepository(
         )
 
         if (chosen != null) {
-            _room.value = gameEngine.processCall(freshRoom, freshBoards, chosen)
+            // Fix for TEE-HEE: Bot must place its own chosen number before calling
+            if (difficulty == BotDifficulty.TEE_HEE) {
+                _boards.update { b ->
+                    val currentBotBoard = b[player2Id] ?: BingoBoard(List(25) { null })
+                    val updatedBotBoard = botMoveStrategy.placeNumber(
+                        botBoard = currentBotBoard,
+                        number = chosen,
+                        calledNumbers = freshRoom.calledNumbers.toSet(),
+                        difficulty = difficulty
+                    )
+                    b + (player2Id to updatedBotBoard)
+                }
+            }
+            
+            // Re-read boards after dynamic placement
+            val finalBoards = _boards.value
+            _room.value = gameEngine.processCall(freshRoom, finalBoards, chosen)
         }
     }
 }
