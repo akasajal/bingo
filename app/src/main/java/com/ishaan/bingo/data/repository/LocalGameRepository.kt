@@ -43,14 +43,18 @@ class LocalGameRepository(
     override fun createRoomDraft(): GameRoom = GameRoom(
         id = "mock-room",
         code = "DEBUG",
-        status = GameStatus.WAITING_FOR_PLAYER
+        status = GameStatus.WAITING_FOR_PLAYER,
+        isBotGame = true,
+        botDifficulty = difficulty
     )
 
     override suspend fun createRoom(room: GameRoom): Result<GameRoom> {
         val roomWithCreator = room.copy(
             id = "mock-room",
             code = "DEBUG",
-            players = mapOf(playerId to Player(id = playerId, name = "You"))
+            players = mapOf(playerId to Player(id = playerId, name = "You")),
+            isBotGame = true,
+            botDifficulty = difficulty
         )
         _room.value = roomWithCreator
 

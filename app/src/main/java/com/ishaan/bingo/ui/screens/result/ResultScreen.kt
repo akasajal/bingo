@@ -89,6 +89,23 @@ fun ResultScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        if (room.isBotGame) {
+            val difficultyText = room.botDifficulty?.name?.replace("_", " ") ?: "UNKNOWN"
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.extraSmall,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text(
+                    text = "VS BOT ($difficultyText)",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(48.dp))
 
         // Reveal Header
