@@ -5,10 +5,7 @@ service cloud.firestore {
 
     // Game Room rules
     match /rooms/{roomId} {
-      // Allow read if user is authenticated
       allow read: if request.auth != null;
-
-      // Allow create if authenticated
       allow create: if request.auth != null;
 
       // Allow update if:
@@ -21,15 +18,20 @@ service cloud.firestore {
 
       // Boards subcollection
       match /boards/{playerId} {
-        // A player can only write to their own board
-        allow write: if request.auth != null && request.auth.uid == playerId;
+        // Only owner can create or update their board
+        allow create, update: if request.auth != null && request.auth.uid == playerId;
 
-        // A player can read their own board anytime.
-        // They can only read the opponent's board if the game is FINISHED.
-        allow read: if request.auth != null && (
+        // ALLOW DELETION if:
+        // 1. It is your own board
+        // 2. OR the game is FINISHED (this allows any player to trigger the 'Play Again' reset)
+        allow delete: if request.auth != null && (
           request.auth.uid == playerId ||
           get(/databases/$(database)/documents/rooms/$(roomId)).data.status == 'FINISHED'
         );
+
+        // Any player in the room can read any board (required for authoritative client-side logic)
+        allow read: if request.auth != null &&
+          get(/databases/$(database)/documents/rooms/$(roomId)).data.players.keys().hasAny([request.auth.uid]);
       }
     }
   }
