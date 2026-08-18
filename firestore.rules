@@ -10,10 +10,15 @@ service cloud.firestore {
 
       // Allow update if:
       // 1. User is one of the players already in the room
-      // 2. Or user is joining a room that has < 2 players
+      // 2. Or user is joining a room that has < 2 players (restricted to only adding themselves)
       allow update: if request.auth != null && (
         resource.data.players.keys().hasAny([request.auth.uid]) ||
-        resource.data.players.size() < 2
+        (
+          resource.data.players.size() < 2 &&
+          request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
+          request.resource.data.players.keys().hasAny([request.auth.uid]) &&
+          request.resource.data.status == resource.data.status // Prevent status corruption during join
+        )
       );
 
       // Boards subcollection

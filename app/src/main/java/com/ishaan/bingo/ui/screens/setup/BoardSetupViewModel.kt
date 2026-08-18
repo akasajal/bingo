@@ -74,7 +74,7 @@ class BoardSetupViewModel(
                     it.copy(
                         isSubmitting = false,
                         isWaitingForOpponent = false,
-                        error = error.message ?: "We couldn't start the game. Check your connection and try again."
+                        error = mapError(error)
                     )
                 }
             }
@@ -165,8 +165,17 @@ class BoardSetupViewModel(
             result.onSuccess {
                 onComplete()
             }.onFailure { error ->
-                _uiState.update { it.copy(error = error.message) }
+                _uiState.update { it.copy(error = mapError(error)) }
             }
+        }
+    }
+
+    private fun mapError(error: Throwable): String {
+        return when (error.message) {
+            "Maximum 6 presets allowed" -> "You can only have up to 6 preset boards."
+            "This board arrangement already exists as a preset" -> "You already have this board arrangement saved."
+            "This arrangement already exists in another preset" -> "This layout matches another one of your presets."
+            else -> error.message ?: "Something went wrong. Please check your connection and try again."
         }
     }
 }

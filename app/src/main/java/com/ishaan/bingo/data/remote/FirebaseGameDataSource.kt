@@ -172,19 +172,31 @@ class FirebaseGameDataSource(
                 val room = snapshot.toObject(GameRoom::class.java) ?: return@runTransaction
 
                 if (room.winnerPlayerId == null) {
-                    val updatedPlayers = room.players.toMutableMap()
-                    val player = updatedPlayers[playerId] ?: return@runTransaction
+                    // Fix #1: Autoritative server-side win verification inside the transaction
+                    val boardSnapshot = transaction.get(docRef.collection("boards").document(playerId))
+                    val board = boardSnapshot.toObject(BingoBoard::class.java) ?: return@runTransaction
                     
-                    updatedPlayers[playerId] = player.copy(
-                        bingoProgress = progress,
-                        completedLines = completedLines
+                    val lineDetector = com.ishaan.bingo.game.BingoLineDetector()
+                    val actualCompletedLines = lineDetector.detectCompletedLines(
+                        board.numbers, 
+                        room.calledNumbers.toSet()
                     )
 
-                    transaction.update(docRef, mapOf(
-                        "players" to updatedPlayers,
-                        "winnerPlayerId" to playerId,
-                        "status" to GameStatus.FINISHED
-                    ))
+                    if (actualCompletedLines.size >= 5) {
+                        val updatedPlayers = room.players.toMutableMap()
+                        val player = updatedPlayers[playerId] ?: return@runTransaction
+                        
+                        updatedPlayers[playerId] = player.copy(
+                            bingoProgress = actualCompletedLines.size,
+                            completedLines = actualCompletedLines.toList()
+                        )
+
+                        transaction.update(docRef, mapOf(
+                            "players" to updatedPlayers,
+                            "winnerPlayerId" to playerId,
+                            "status" to GameStatus.FINISHED
+                        ))
+                    }
                 }
             }.await()
         }

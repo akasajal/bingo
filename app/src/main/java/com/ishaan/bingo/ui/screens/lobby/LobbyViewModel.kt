@@ -89,7 +89,7 @@ class LobbyViewModel(
                 }
                 if (room.status != GameStatus.BOARD_SETUP) observeRoomForCreator(room.id)
             }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, error = error.message) }
+                _uiState.update { it.copy(isLoading = false, error = mapError(error)) }
             }
         }
     }
@@ -112,7 +112,7 @@ class LobbyViewModel(
                     )
                 }
             }.onFailure { error ->
-                _uiState.update { it.copy(isLoading = false, error = error.message) }
+                _uiState.update { it.copy(isLoading = false, error = mapError(error)) }
             }
         }
     }
@@ -144,5 +144,13 @@ class LobbyViewModel(
         roomCreationJob?.cancel()
         roomCreationJob = null
         _uiState.update { LobbyUiState() }
+    }
+
+    private fun mapError(error: Throwable): String {
+        return when (error.message) {
+            "Room is full" -> "This game already has two players."
+            "Room not found" -> "We couldn't find a game with that code."
+            else -> "Something went wrong. Please check your connection and try again."
+        }
     }
 }

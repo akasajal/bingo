@@ -155,12 +155,16 @@ class LocalGameRepository(
 
     private suspend fun simulateOpponentMove(room: GameRoom, boards: Map<String, BingoBoard>) {
         kotlinx.coroutines.delay(800) // Thinking time
-        val p2Board = boards[player2Id] ?: return
-        val chosen = botMoveStrategy.chooseNumber(p2Board, room.calledNumbers.toSet())
+        
+        // Fix #5: Re-read fresh state after delay to avoid using stale room/board data
+        val freshRoom = _room.value ?: return
+        val freshBoards = _boards.value
+        val p2Board = freshBoards[player2Id] ?: return
+        
+        val chosen = botMoveStrategy.chooseNumber(p2Board, freshRoom.calledNumbers.toSet())
 
         if (chosen != null) {
-            val nextRoom = _room.value ?: return
-            _room.value = gameEngine.processCall(nextRoom, boards, chosen)
+            _room.value = gameEngine.processCall(freshRoom, freshBoards, chosen)
         }
     }
 }

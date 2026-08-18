@@ -87,18 +87,18 @@ class GameViewModel(
 
     fun callNumber(number: Int) {
         if (_uiState.value.isCallingNumber) return
+        _uiState.update { it.copy(isCallingNumber = true) }
+        
         val currentRoom = _uiState.value.gameRoom ?: return
         if (currentRoom.currentTurnPlayerId != repository.playerId) return
 
         // Optimistic update — reflect the call instantly in the UI
+        // Fix #3: Removed optimistic turn flip to avoid race conditions with server response
         val optimisticRoom = currentRoom.copy(
             calledNumbers = currentRoom.calledNumbers + number,
-            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
-            // Flip turn optimistically
-            currentTurnPlayerId = currentRoom.players.keys
-                .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
+            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId)
         )
-        _uiState.update { it.copy(gameRoom = optimisticRoom, isCallingNumber = true, error = null) }
+        _uiState.update { it.copy(gameRoom = optimisticRoom, error = null) }
 
         viewModelScope.launch {
             repository.callNumber(roomId, number)
@@ -110,10 +110,18 @@ class GameViewModel(
                         it.copy(
                             gameRoom = currentRoom,
                             isCallingNumber = false,
-                            error = error.message
+                            error = mapError(error)
                         )
                     }
                 }
+        }
+    }
+
+    private fun mapError(error: Throwable): String {
+        return when (error) {
+            is java.net.ConnectException -> "No internet connection"
+            is java.util.concurrent.TimeoutException -> "Request timed out"
+            else -> "Something went wrong. Please try again."
         }
     }
 }
