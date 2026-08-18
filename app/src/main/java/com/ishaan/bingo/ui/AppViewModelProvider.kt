@@ -7,6 +7,7 @@ import com.ishaan.bingo.data.repository.BingoDatabase
 import com.ishaan.bingo.data.repository.GameRepositoryImpl
 import com.ishaan.bingo.data.repository.LocalGameRepository
 import com.ishaan.bingo.data.repository.LocalPresetRepository
+import com.ishaan.bingo.domain.model.BotDifficulty
 import com.ishaan.bingo.ui.screens.game.GameViewModel
 import com.ishaan.bingo.ui.screens.lobby.LobbyViewModel
 import com.ishaan.bingo.ui.screens.result.ResultViewModel
@@ -21,8 +22,8 @@ object AppViewModelProvider {
 
     var currentBotRepository: LocalGameRepository? = null
 
-    fun freshBotRepository(): LocalGameRepository {
-        val repo = LocalGameRepository()
+    fun freshBotRepository(difficulty: BotDifficulty = BotDifficulty.EASY): LocalGameRepository {
+        val repo = LocalGameRepository(difficulty = difficulty)
         currentBotRepository = repo
         return repo
     }

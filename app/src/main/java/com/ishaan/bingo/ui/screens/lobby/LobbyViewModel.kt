@@ -2,6 +2,7 @@ package com.ishaan.bingo.ui.screens.lobby
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ishaan.bingo.domain.model.BotDifficulty
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.ui.AppViewModelProvider
@@ -107,11 +108,11 @@ class LobbyViewModel(
         }
     }
 
-    fun playWithBot() {
+    fun playWithBot(difficulty: BotDifficulty) {
         roomObserverJob?.cancel()
         roomObserverJob = null
 
-        val localRepo = AppViewModelProvider.freshBotRepository()
+        val localRepo = AppViewModelProvider.freshBotRepository(difficulty)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }

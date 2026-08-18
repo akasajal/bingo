@@ -4,6 +4,7 @@ import com.ishaan.bingo.domain.model.BingoBoard
 import com.ishaan.bingo.domain.model.GameRoom
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.model.Player
+import com.ishaan.bingo.domain.model.BotDifficulty
 import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.game.BotMoveStrategy
 import com.ishaan.bingo.game.BingoGameEngine
@@ -19,6 +20,7 @@ import java.util.UUID
  * It auto-joins a second player when a room is created.
  */
 class LocalGameRepository(
+    private val difficulty: BotDifficulty = BotDifficulty.EASY,
     private val gameEngine: BingoGameEngine = BingoGameEngine(),
     private val botMoveStrategy: BotMoveStrategy = BotMoveStrategy(),
     override val playerId: String = "local-player-1"
@@ -160,8 +162,14 @@ class LocalGameRepository(
         val freshRoom = _room.value ?: return
         val freshBoards = _boards.value
         val p2Board = freshBoards[player2Id] ?: return
+        val userBoard = freshBoards[playerId] ?: return
         
-        val chosen = botMoveStrategy.chooseNumber(p2Board, freshRoom.calledNumbers.toSet())
+        val chosen = botMoveStrategy.chooseNumber(
+            botBoard = p2Board,
+            userBoard = userBoard,
+            calledNumbers = freshRoom.calledNumbers.toSet(),
+            difficulty = difficulty
+        )
 
         if (chosen != null) {
             _room.value = gameEngine.processCall(freshRoom, freshBoards, chosen)

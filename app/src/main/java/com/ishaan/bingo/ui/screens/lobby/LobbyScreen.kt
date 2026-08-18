@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ishaan.bingo.domain.model.BotDifficulty
 
 @Composable
 fun LobbyScreen(
@@ -21,6 +22,7 @@ fun LobbyScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var joinCode by remember { mutableStateOf("") }
+    var showDifficultyPopup by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.shouldNavigateToSetup, uiState.joinedRoomId) {
         if (uiState.shouldNavigateToSetup) {
@@ -29,6 +31,42 @@ fun LobbyScreen(
                 onGameJoined(it, uiState.isBotGame)
             }
         }
+    }
+
+    if (showDifficultyPopup) {
+        AlertDialog(
+            onDismissRequest = { showDifficultyPopup = false },
+            title = { Text("Select Difficulty", fontWeight = FontWeight.Bold) },
+            text = { Text("Choose how smart the bot should be.") },
+            confirmButton = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            viewModel.playWithBot(BotDifficulty.EASY)
+                            showDifficultyPopup = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("EASY MODE")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.playWithBot(BotDifficulty.HARD)
+                            showDifficultyPopup = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("HARD MODE")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDifficultyPopup = false }) {
+                    Text("CANCEL")
+                }
+            }
+        )
     }
 
     if (uiState.gameCode.isNotBlank() && !uiState.shouldNavigateToSetup && !uiState.isBotGame) {
@@ -120,7 +158,7 @@ fun LobbyScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
-                onClick = { viewModel.playWithBot() },
+                onClick = { showDifficultyPopup = true },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 enabled = !uiState.isLoading,
                 shape = MaterialTheme.shapes.medium
