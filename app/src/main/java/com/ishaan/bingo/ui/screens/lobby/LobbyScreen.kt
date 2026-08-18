@@ -59,6 +59,19 @@ fun LobbyScreen(
                     ) {
                         Text("HARD MODE")
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.playWithBot(BotDifficulty.TEE_HEE)
+                            showDifficultyPopup = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        )
+                    ) {
+                        Text("TEE-HEE MODE")
+                    }
                 }
             },
             dismissButton = {
