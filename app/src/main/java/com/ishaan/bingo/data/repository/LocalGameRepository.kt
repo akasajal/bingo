@@ -85,20 +85,29 @@ class LocalGameRepository(
             boards + (playerId to board) + (player2Id to (boards[player2Id] ?: BingoBoard((1..25).toList().shuffled())))
         }
 
+        var firstTurnId = ""
         _room.update { room ->
             val r = room ?: return@update null
             val updatedPlayers = r.players.toMutableMap()
             updatedPlayers[playerId] = updatedPlayers[playerId]?.copy(isReady = true) ?: return@update r
-
-            // In mock mode, P2 is always ready
             updatedPlayers[player2Id] = updatedPlayers[player2Id]?.copy(isReady = true) ?: return@update r
+
+            firstTurnId = listOf(playerId, player2Id).random()
 
             r.copy(
                 players = updatedPlayers,
                 status = GameStatus.PLAYING,
-                currentTurnPlayerId = playerId // You start first
+                currentTurnPlayerId = firstTurnId
             )
         }
+
+        if (firstTurnId == player2Id) {
+            val room = _room.value
+            if (room != null) {
+                simulateOpponentMove(room, _boards.value)
+            }
+        }
+        
         return Result.success(Unit)
     }
 
