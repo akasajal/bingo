@@ -19,7 +19,6 @@ object AppViewModelProvider {
     val settingsViewModel = SettingsViewModel()
     lateinit var presetRepository: LocalPresetRepository
 
-    // Fix: one bot repo per game session, replaced on every new playWithBot() call
     var currentBotRepository: LocalGameRepository? = null
 
     fun freshBotRepository(): LocalGameRepository {
@@ -32,8 +31,11 @@ object AppViewModelProvider {
         presetRepository = LocalPresetRepository(db)
     }
 
+    // LobbyViewModel as a true singleton — one instance for the entire app lifetime
+    val lobbyViewModel: LobbyViewModel by lazy { LobbyViewModel(repository) }
+
+    // Factory for screens that still need viewModel() scoping (Settings, Presets)
     val Factory = viewModelFactory {
-        initializer { LobbyViewModel(repository) }
         initializer { settingsViewModel }
         initializer { PresetViewModel(presetRepository) }
     }

@@ -12,14 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ishaan.bingo.ui.AppViewModelProvider
 
 @Composable
 fun LobbyScreen(
     onGameJoined: (roomId: String, isBot: Boolean) -> Unit,
     onSettingsClick: () -> Unit,
-    viewModel: LobbyViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: LobbyViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var joinCode by remember { mutableStateOf("") }

@@ -37,6 +37,9 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun BingoNavHost(navController: NavHostController = rememberNavController()) {
+    // Use the singleton directly — same instance everywhere, no scoping surprises
+    val lobbyViewModel = AppViewModelProvider.lobbyViewModel
+
     NavHost(navController = navController, startDestination = Screen.Lobby.route) {
         composable(Screen.Lobby.route) {
             LobbyScreen(
@@ -44,9 +47,7 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
                     navController.navigate(Screen.BoardSetup.createRoute(roomId, isBot))
                 },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                    factory = AppViewModelProvider.Factory
-                )
+                viewModel = lobbyViewModel
             )
         }
         composable(Screen.Settings.route) {
@@ -77,13 +78,11 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
         composable(Screen.BoardSetup.route) { backStackEntry ->
             val roomId = backStackEntry.arguments?.getString("roomId") ?: ""
             val isBot = backStackEntry.arguments?.getString("isBot")?.toBoolean() ?: false
-            // Share the same LobbyViewModel instance so we can reset its state on back
-            val lobbyViewModel: com.ishaan.bingo.ui.screens.lobby.LobbyViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel(factory = AppViewModelProvider.Factory)
             BoardSetupScreen(
                 roomId = roomId,
                 onBack = {
-                    lobbyViewModel.resetLobby() // clear shouldNavigateToSetup before returning
+                    // Same singleton — this actually affects what LobbyScreen observes
+                    lobbyViewModel.resetLobby()
                     navController.popBackStack(Screen.Lobby.route, inclusive = false)
                 },
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -101,7 +100,7 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
                     navController.navigate(Screen.Result.createRoute(roomId, winnerId, isBot))
                 },
                 onForfeit = {
-                    // Pop everything back to Lobby cleanly
+                    lobbyViewModel.resetLobby()
                     navController.popBackStack(Screen.Lobby.route, inclusive = false)
                 },
                 viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
@@ -115,6 +114,7 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
             ResultScreen(
                 roomId = roomId,
                 onPlayAgain = {
+                    lobbyViewModel.resetLobby()
                     navController.navigate(Screen.Lobby.route) {
                         popUpTo(Screen.Lobby.route) { inclusive = true }
                     }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.repository.GameRepository
 import com.ishaan.bingo.ui.AppViewModelProvider
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -26,7 +27,14 @@ class LobbyViewModel(
     private val _uiState = MutableStateFlow(LobbyUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Track the observer job so we can cancel it before starting a new game
+    private var roomObserverJob: Job? = null
+
     fun createGame() {
+        // Cancel any leftover observer from a previous session before starting fresh
+        roomObserverJob?.cancel()
+        roomObserverJob = null
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.createRoom().onSuccess { room ->
@@ -39,6 +47,9 @@ class LobbyViewModel(
     }
 
     fun joinGame(code: String) {
+        roomObserverJob?.cancel()
+        roomObserverJob = null
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             repository.joinRoom(code).onSuccess { room ->
@@ -57,7 +68,9 @@ class LobbyViewModel(
     }
 
     fun playWithBot() {
-        // Fix: always create a fresh repo and register it globally before starting
+        roomObserverJob?.cancel()
+        roomObserverJob = null
+
         val localRepo = AppViewModelProvider.freshBotRepository()
 
         viewModelScope.launch {
@@ -78,7 +91,7 @@ class LobbyViewModel(
     }
 
     private fun observeRoomForCreator(roomId: String) {
-        viewModelScope.launch {
+        roomObserverJob = viewModelScope.launch {
             repository.getGameRoom(roomId).collectLatest { room ->
                 if (room?.status == GameStatus.BOARD_SETUP) {
                     _uiState.update { it.copy(shouldNavigateToSetup = true) }
@@ -91,5 +104,10 @@ class LobbyViewModel(
 
     fun clearError() { _uiState.update { it.copy(error = null) } }
 
-    fun resetLobby() { _uiState.update { LobbyUiState() } }
+    fun resetLobby() {
+        // Cancel any in-flight room observer so it can't update state after reset
+        roomObserverJob?.cancel()
+        roomObserverJob = null
+        _uiState.update { LobbyUiState() }
+    }
 }
