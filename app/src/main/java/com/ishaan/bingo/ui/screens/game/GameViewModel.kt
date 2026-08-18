@@ -87,20 +87,20 @@ class GameViewModel(
 
     fun callNumber(number: Int) {
         if (_uiState.value.isCallingNumber) return
-        _uiState.update { it.copy(isCallingNumber = true) }
-        
         val currentRoom = _uiState.value.gameRoom ?: return
         if (currentRoom.currentTurnPlayerId != repository.playerId) return
 
-        // Optimistic update — reflect the call instantly in the UI
-        val optimisticRoom = currentRoom.copy(
-            calledNumbers = currentRoom.calledNumbers + number,
-            callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
-            // Fix #3: Restore optimistic turn flip for snappier UI
-            currentTurnPlayerId = currentRoom.players.keys
-                .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
-        )
-        _uiState.update { it.copy(gameRoom = optimisticRoom, error = null) }
+        // Atomic Optimistic Update — reflects call instantly and sets loading guard
+        _uiState.update { 
+            val optimisticRoom = currentRoom.copy(
+                calledNumbers = currentRoom.calledNumbers + number,
+                callerMap = currentRoom.callerMap + (number.toString() to repository.playerId),
+                // Restore optimistic turn flip for snappier UI
+                currentTurnPlayerId = currentRoom.players.keys
+                    .firstOrNull { it != repository.playerId } ?: currentRoom.currentTurnPlayerId
+            )
+            it.copy(gameRoom = optimisticRoom, isCallingNumber = true, error = null) 
+        }
 
         viewModelScope.launch {
             repository.callNumber(roomId, number)

@@ -141,14 +141,18 @@ fun ResultScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Strikethrough Overlay for revealed board
-                viewingPlayer?.let { player ->
-                    BingoGridOverlay(
-                        completedLines = player.completedLines,
-                        lineColor = MaterialTheme.bingoColors.success.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxSize().padding(4.dp)
-                    )
+                // Strikethrough Overlay for revealed board — Calculate locally for visual consistency
+                val localLineDetector = remember { com.ishaan.bingo.game.BingoLineDetector() }
+                val currentBoardNumbers = currentBoard?.numbers ?: List(25) { null }
+                val locallyCompletedLines = remember(room.calledNumbers, currentBoardNumbers) {
+                    localLineDetector.detectCompletedLines(currentBoardNumbers, room.calledNumbers.toSet()).toList()
                 }
+
+                BingoGridOverlay(
+                    completedLines = locallyCompletedLines,
+                    lineColor = MaterialTheme.bingoColors.success.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                )
             }
         }
 

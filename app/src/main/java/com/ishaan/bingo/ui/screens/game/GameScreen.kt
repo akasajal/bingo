@@ -31,6 +31,7 @@ import com.ishaan.bingo.ui.components.BingoGridOverlay
 import com.ishaan.bingo.ui.theme.bingoColors
 import com.ishaan.bingo.ui.screens.settings.SettingsViewModel
 import com.ishaan.bingo.ui.theme.HapticManager
+import com.ishaan.bingo.game.BingoLineDetector
 import kotlinx.coroutines.delay
 
 @Composable
@@ -167,14 +168,18 @@ fun GameScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Strikethrough Overlay
-                myPlayer?.let { player ->
-                    BingoGridOverlay(
-                        completedLines = player.completedLines,
-                        lineColor = MaterialTheme.bingoColors.success.copy(alpha = 0.5f),
-                        modifier = Modifier.fillMaxSize().padding(4.dp)
-                    )
+                // Strikethrough Overlay — Unify logic locally to prevent visual desync
+                val localLineDetector = remember { BingoLineDetector() }
+                val currentBoardNumbers = board?.numbers ?: List(25) { null }
+                val locallyCompletedLines = remember(calledNumbers, currentBoardNumbers) {
+                    localLineDetector.detectCompletedLines(currentBoardNumbers, calledNumbers).toList()
                 }
+
+                BingoGridOverlay(
+                    completedLines = locallyCompletedLines,
+                    lineColor = MaterialTheme.bingoColors.success.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                )
             }
         }
 
