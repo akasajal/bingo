@@ -47,8 +47,7 @@ fun GameScreen(
     val hapticsEnabled by settingsViewModel.hapticsEnabled.collectAsState()
     val room = uiState.gameRoom
     val board = uiState.playerBoard
-    val myPlayer = room?.players?.get(viewModel.repository.playerId)
-
+    
     val context = LocalContext.current
     val hapticManager = remember { HapticManager(context) }
 
@@ -97,8 +96,8 @@ fun GameScreen(
         modifier = Modifier.fillMaxSize().systemBarsPadding().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // BINGO Progress Header
-        BingoHeader(progress = myPlayer?.bingoProgress ?: 0)
+        // BINGO Progress Header — Prefer local progress for zero latency
+        BingoHeader(progress = uiState.localBingoProgress)
 
         Spacer(modifier = Modifier.height(12.dp))
 

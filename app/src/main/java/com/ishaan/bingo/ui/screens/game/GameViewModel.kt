@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 data class GameUiState(
     val gameRoom: GameRoom? = null,
     val playerBoard: BingoBoard? = null,
+    val localBingoProgress: Int = 0,
     val isLoading: Boolean = false,
     val isCallingNumber: Boolean = false,
     val error: String? = null
@@ -58,17 +59,20 @@ class GameViewModel(
             ) { calledNumbers, board ->
                 if (calledNumbers == null || board == null) return@combine
 
-                val myPlayer = uiState.value.gameRoom?.players?.get(repository.playerId) ?: return@combine
-                
                 // Calculate actual progress based on current board and called numbers
                 val detectedLines = lineDetector.detectCompletedLines(board.numbers, calledNumbers.toSet())
+                val newProgress = detectedLines.size.coerceAtMost(5)
+
+                // Update local state immediately for zero-latency UI feedback
+                _uiState.update { it.copy(localBingoProgress = newProgress) }
+
+                val myPlayer = uiState.value.gameRoom?.players?.get(repository.playerId) ?: return@combine
                 val currentCompletedLines = myPlayer.completedLines.toSet()
                 
                 // Only sync if we have actually found new lines not yet on the server
                 val newlyCompletedLines = detectedLines - currentCompletedLines
                 
                 if (newlyCompletedLines.isNotEmpty()) {
-                    val newProgress = (myPlayer.bingoProgress + newlyCompletedLines.size).coerceAtMost(5)
                     // Double check we aren't re-syncing the same progress
                     if (newProgress > myPlayer.bingoProgress) {
                         val claimWin = newProgress >= 5
