@@ -42,12 +42,13 @@ class LocalGameRepository(
             players = mapOf(playerId to Player(id = playerId, name = "You"))
         )
         _room.value = room
-        
+
         // Auto-join a second player after a short delay to simulate "waiting"
         kotlinx.coroutines.delay(1000)
         joinRoom("DEBUG")
-        
-        return Result.success(room)
+
+        // Fix: return the current (updated) room state, not the stale initial snapshot
+        return Result.success(_room.value ?: room)
     }
 
     override suspend fun joinRoom(code: String): Result<GameRoom> {
@@ -60,22 +61,22 @@ class LocalGameRepository(
             status = GameStatus.BOARD_SETUP
         )
         _room.value = updatedRoom
-        
+
         // Auto-submit board for P2
         val p2Board = BingoBoard((1..25).toList().shuffled())
         _boards.update { it + (player2Id to p2Board) }
-        
+
         return Result.success(updatedRoom)
     }
 
     override suspend fun submitBoard(roomId: String, board: BingoBoard): Result<Unit> {
         _boards.update { it + (playerId to board) }
-        
+
         _room.update { room ->
             val r = room ?: return@update null
             val updatedPlayers = r.players.toMutableMap()
             updatedPlayers[playerId] = updatedPlayers[playerId]?.copy(isReady = true) ?: return@update r
-            
+
             // In mock mode, P2 is always ready
             updatedPlayers[player2Id] = updatedPlayers[player2Id]?.copy(isReady = true) ?: return@update r
 
@@ -91,16 +92,16 @@ class LocalGameRepository(
     override suspend fun callNumber(roomId: String, number: Int): Result<Unit> {
         val room = _room.value ?: return Result.failure(Exception("Room not found"))
         val boards = _boards.value
-        
+
         // Process your call
         val updatedRoom = gameEngine.processCall(room, boards, number)
         _room.value = updatedRoom
-        
+
         // If it's now Opponent's turn, simulate their move
         if (updatedRoom.status == GameStatus.PLAYING && updatedRoom.currentTurnPlayerId == player2Id) {
             simulateOpponentMove(updatedRoom, boards)
         }
-        
+
         return Result.success(Unit)
     }
 
@@ -108,7 +109,7 @@ class LocalGameRepository(
         kotlinx.coroutines.delay(1500) // Thinking time
         val p2Board = boards[player2Id] ?: return
         val availableNumbers = p2Board.numbers.filterNotNull().filter { !room.calledNumbers.contains(it) }
-        
+
         if (availableNumbers.isNotEmpty()) {
             val chosen = availableNumbers.random()
             val nextRoom = _room.value ?: return

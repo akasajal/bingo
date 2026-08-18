@@ -16,9 +16,17 @@ import com.ishaan.bingo.ui.screens.setup.BoardSetupViewModel
 
 object AppViewModelProvider {
     val repository = GameRepositoryImpl(FirebaseGameDataSource())
-    val botRepository = LocalGameRepository()
     val settingsViewModel = SettingsViewModel()
     lateinit var presetRepository: LocalPresetRepository
+
+    // Fix: one bot repo per game session, replaced on every new playWithBot() call
+    var currentBotRepository: LocalGameRepository? = null
+
+    fun freshBotRepository(): LocalGameRepository {
+        val repo = LocalGameRepository()
+        currentBotRepository = repo
+        return repo
+    }
 
     fun init(db: BingoDatabase) {
         presetRepository = LocalPresetRepository(db)
@@ -26,16 +34,28 @@ object AppViewModelProvider {
 
     val Factory = viewModelFactory {
         initializer { LobbyViewModel(repository) }
-        initializer { BoardSetupViewModel(repository) }
         initializer { settingsViewModel }
         initializer { PresetViewModel(presetRepository) }
     }
 
+    fun boardSetupViewModelFactory(roomId: String, isBot: Boolean = false) = viewModelFactory {
+        initializer {
+            val repo = if (isBot) currentBotRepository ?: LocalGameRepository() else repository
+            BoardSetupViewModel(repo)
+        }
+    }
+
     fun gameViewModelFactory(roomId: String, isBot: Boolean = false) = viewModelFactory {
-        initializer { GameViewModel(if (isBot) botRepository else repository, roomId) }
+        initializer {
+            val repo = if (isBot) currentBotRepository ?: LocalGameRepository() else repository
+            GameViewModel(repo, roomId)
+        }
     }
 
     fun resultViewModelFactory(roomId: String, isBot: Boolean = false) = viewModelFactory {
-        initializer { ResultViewModel(if (isBot) botRepository else repository, roomId) }
+        initializer {
+            val repo = if (isBot) currentBotRepository ?: LocalGameRepository() else repository
+            ResultViewModel(repo, roomId)
+        }
     }
 }

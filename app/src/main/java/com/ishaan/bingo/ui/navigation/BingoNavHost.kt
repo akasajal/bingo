@@ -76,6 +76,10 @@ fun BingoNavHost(navController: NavHostController = rememberNavController()) {
             val isBot = backStackEntry.arguments?.getString("isBot")?.toBoolean() ?: false
             BoardSetupScreen(
                 roomId = roomId,
+                // Fix: use the bot-aware factory so BoardSetupViewModel gets the correct repository
+                viewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                    factory = AppViewModelProvider.boardSetupViewModelFactory(roomId, isBot)
+                ),
                 onStartGame = { navController.navigate(Screen.Game.createRoute(roomId, isBot)) }
             )
         }

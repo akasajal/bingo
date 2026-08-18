@@ -29,7 +29,7 @@ import com.ishaan.bingo.ui.theme.HapticManager
 fun BoardSetupScreen(
     roomId: String,
     onStartGame: () -> Unit,
-    viewModel: BoardSetupViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
+    viewModel: BoardSetupViewModel,
     presetViewModel: PresetViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory),
     settingsViewModel: com.ishaan.bingo.ui.screens.settings.SettingsViewModel = viewModel(factory = com.ishaan.bingo.ui.AppViewModelProvider.Factory)
 ) {
@@ -60,7 +60,7 @@ fun BoardSetupScreen(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (presets.isEmpty()) {
@@ -147,7 +147,7 @@ fun BoardSetupScreen(
         Text(text = "BUILD YOUR BOARD", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "Tap cells to place numbers 1–25 sequentially.", style = MaterialTheme.typography.bodyMedium)
-        
+
         Spacer(modifier = Modifier.height(24.dp))
 
         LazyVerticalGrid(
@@ -169,11 +169,11 @@ fun BoardSetupScreen(
                         .aspectRatio(1f)
                         .clip(MaterialTheme.shapes.small)
                         .background(
-                            color = if (number != null) MaterialTheme.colorScheme.primaryContainer 
-                                    else MaterialTheme.bingoColors.cell
+                            color = if (number != null) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.bingoColors.cell
                         )
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
-                        .clickable { 
+                        .clickable {
                             if (hapticsEnabled) hapticManager.performTick()
                             if (number == null) {
                                 viewModel.onCellClick(index)
@@ -196,16 +196,16 @@ fun BoardSetupScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Randomize
             Surface(
-                onClick = { 
+                onClick = {
                     if (hapticsEnabled) hapticManager.performTick()
-                    viewModel.randomize() 
+                    viewModel.randomize()
                 },
                 modifier = Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -217,7 +217,7 @@ fun BoardSetupScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Shuffle, 
+                        imageVector = Icons.Default.Shuffle,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -245,7 +245,7 @@ fun BoardSetupScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.GridView, 
+                        imageVector = Icons.Default.GridView,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary
@@ -286,10 +286,10 @@ fun BoardSetupScreen(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(
-                onClick = { 
+                onClick = {
                     if (hapticsEnabled) hapticManager.performTick()
-                    viewModel.undo() 
-                }, 
+                    viewModel.undo()
+                },
                 enabled = uiState.history.isNotEmpty(),
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.medium,
@@ -298,7 +298,7 @@ fun BoardSetupScreen(
                 Text("UNDO", fontWeight = FontWeight.SemiBold)
             }
             Button(
-                onClick = { showDeleteDialog = true }, 
+                onClick = { showDeleteDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
                 shape = MaterialTheme.shapes.medium,

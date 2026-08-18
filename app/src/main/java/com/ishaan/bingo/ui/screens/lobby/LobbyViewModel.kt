@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ishaan.bingo.domain.model.GameStatus
 import com.ishaan.bingo.domain.repository.GameRepository
+import com.ishaan.bingo.ui.AppViewModelProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -56,10 +57,12 @@ class LobbyViewModel(
     }
 
     fun playWithBot() {
-        // Uses LocalGameRepository — no Firebase involved
+        // Fix: always create a fresh repo and register it globally before starting
+        val localRepo = AppViewModelProvider.freshBotRepository()
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            repository.createRoom().onSuccess { room ->
+            localRepo.createRoom().onSuccess { room ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
