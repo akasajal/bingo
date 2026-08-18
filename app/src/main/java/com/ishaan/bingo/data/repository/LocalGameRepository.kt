@@ -138,12 +138,28 @@ class LocalGameRepository(
         val updatedRoom = gameEngine.processCall(room, boards, number)
         _room.value = updatedRoom
 
-        // Simulate opponent move
-        if (updatedRoom.status == GameStatus.PLAYING && updatedRoom.currentTurnPlayerId == player2Id) {
+        if (updatedRoom.status == GameStatus.FINISHED) {
+            handleGameEnd()
+        } else if (updatedRoom.currentTurnPlayerId == player2Id) {
             simulateOpponentMove(updatedRoom, boards)
         }
 
         return Result.success(Unit)
+    }
+
+    private fun handleGameEnd() {
+        if (difficulty == BotDifficulty.TEE_HEE) {
+            _boards.update { boards ->
+                val botBoard = boards[player2Id] ?: return@update boards
+                val currentNumbers = botBoard.numbers.filterNotNull().toSet()
+                val unplacedNumbers = (1..25).filter { it !in currentNumbers }.shuffled().toMutableList()
+                
+                val finalNumbers = botBoard.numbers.map { 
+                    it ?: unplacedNumbers.removeAt(0)
+                }
+                boards + (player2Id to BingoBoard(finalNumbers))
+            }
+        }
     }
 
     override suspend fun syncMyProgress(
@@ -216,7 +232,12 @@ class LocalGameRepository(
             
             // Re-read boards after dynamic placement
             val finalBoards = _boards.value
-            _room.value = gameEngine.processCall(freshRoom, finalBoards, chosen)
+            val nextRoom = gameEngine.processCall(freshRoom, finalBoards, chosen)
+            _room.value = nextRoom
+
+            if (nextRoom.status == GameStatus.FINISHED) {
+                handleGameEnd()
+            }
         }
     }
 }
