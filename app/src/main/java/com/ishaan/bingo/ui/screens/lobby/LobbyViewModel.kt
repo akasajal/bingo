@@ -147,9 +147,11 @@ class LobbyViewModel(
     }
 
     private fun mapError(error: Throwable): String {
-        return when (error.message) {
-            "Room is full" -> "This game already has two players."
-            "Room not found" -> "We couldn't find a game with that code."
+        val message = error.message ?: ""
+        return when {
+            message.contains("Room is full", ignoreCase = true) -> "This game already has two players."
+            message.contains("Room not found", ignoreCase = true) -> "We couldn't find a game with that code."
+            message.contains("PERMISSION_DENIED", ignoreCase = true) -> "Access denied. Please try again."
             else -> "Something went wrong. Please check your connection and try again."
         }
     }

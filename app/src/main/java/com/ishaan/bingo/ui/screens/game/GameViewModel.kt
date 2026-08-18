@@ -118,9 +118,11 @@ class GameViewModel(
     }
 
     private fun mapError(error: Throwable): String {
-        return when (error) {
-            is java.net.ConnectException -> "No internet connection"
-            is java.util.concurrent.TimeoutException -> "Request timed out"
+        val message = error.message ?: ""
+        return when {
+            error is java.net.ConnectException || message.contains("offline", true) -> "No internet connection"
+            error is java.util.concurrent.TimeoutException -> "Request timed out"
+            message.contains("PERMISSION_DENIED", ignoreCase = true) -> "Access denied. Please try again."
             else -> "Something went wrong. Please try again."
         }
     }

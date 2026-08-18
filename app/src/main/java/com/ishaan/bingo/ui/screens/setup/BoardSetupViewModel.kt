@@ -171,11 +171,13 @@ class BoardSetupViewModel(
     }
 
     private fun mapError(error: Throwable): String {
-        return when (error.message) {
-            "Maximum 6 presets allowed" -> "You can only have up to 6 preset boards."
-            "This board arrangement already exists as a preset" -> "You already have this board arrangement saved."
-            "This arrangement already exists in another preset" -> "This layout matches another one of your presets."
-            else -> error.message ?: "Something went wrong. Please check your connection and try again."
+        val message = error.message ?: ""
+        return when {
+            message.contains("Maximum 6 presets allowed", ignoreCase = true) -> "You can only have up to 6 preset boards."
+            message.contains("This board arrangement already exists as a preset", ignoreCase = true) -> "You already have this board arrangement saved."
+            message.contains("This arrangement already exists in another preset", ignoreCase = true) -> "This layout matches another one of your presets."
+            message.contains("PERMISSION_DENIED", ignoreCase = true) -> "Access denied. Please try again."
+            else -> "Something went wrong. Please check your connection and try again."
         }
     }
 }

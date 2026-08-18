@@ -17,7 +17,7 @@ service cloud.firestore {
           resource.data.players.size() < 2 &&
           request.resource.data.players.keys().hasAll(resource.data.players.keys()) &&
           request.resource.data.players.keys().hasAny([request.auth.uid]) &&
-          request.resource.data.status == resource.data.status // Prevent status corruption during join
+          (request.resource.data.status == resource.data.status || request.resource.data.status == 'BOARD_SETUP')
         )
       );
 
