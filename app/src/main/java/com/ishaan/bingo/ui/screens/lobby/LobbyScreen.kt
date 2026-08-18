@@ -70,7 +70,7 @@ fun LobbyScreen(
                             containerColor = MaterialTheme.colorScheme.tertiary
                         )
                     ) {
-                        Text("TEE-HEE MODE 😈")
+                        Text("tee-hee MODE")
                     }
                 }
             },
