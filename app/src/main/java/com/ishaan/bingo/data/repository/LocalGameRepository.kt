@@ -116,50 +116,76 @@ class LocalGameRepository(
                 simulateOpponentMove(room, _boards.value)
             }
         }
-        
+
         return Result.success(Unit)
     }
 
     override suspend fun callNumber(roomId: String, number: Int): Result<Unit> {
         val room = _room.value ?: return Result.failure(Exception("Room not found"))
-        
-        // Fix for TEE-HEE: Bot must place the user's called number first
-        if (difficulty == BotDifficulty.TEE_HEE) {
-            _boards.update { boards ->
-                val botBoard = boards[player2Id] ?: BingoBoard(List(25) { null })
-                val updatedBotBoard = botMoveStrategy.placeNumber(
-                    botBoard = botBoard,
-                    number = number,
-                    calledNumbers = room.calledNumbers.toSet(),
-                    difficulty = difficulty
-                )
-                boards + (player2Id to updatedBotBoard)
-            }
-        }
 
         val boards = _boards.value
-        // Process your call using the engine locally
+        // Process call locally
         val updatedRoom = gameEngine.processCall(room, boards, number)
         _room.value = updatedRoom
 
         if (updatedRoom.status == GameStatus.FINISHED) {
             handleGameEnd()
-        } else if (updatedRoom.currentTurnPlayerId == player2Id) {
-            simulateOpponentMove(updatedRoom, boards)
+        } else {
+            // TEE-HEE Overhaul: Manifestation at Turn 16
+            if (difficulty == BotDifficulty.TEE_HEE && updatedRoom.calledNumbers.size == 16) {
+                manifestBotBoard(updatedRoom, callingPlayerId = room.currentTurnPlayerId)
+            } else if (updatedRoom.currentTurnPlayerId == player2Id) {
+                simulateOpponentMove(_room.value ?: updatedRoom, _boards.value)
+            }
         }
 
         return Result.success(Unit)
+    }
+
+    private fun manifestBotBoard(room: GameRoom, callingPlayerId: String) {
+        val called = room.calledNumbers
+        val uncalled = (1..25).filter { it !in called }.shuffled()
+        
+        val newBoard = botMoveStrategy.manifestTeeHeeBoard(called, uncalled)
+        
+        _boards.update { it + (player2Id to newBoard) }
+        
+        // Finalize room state: Bot now has 5 lines. 
+        // We re-run processCall logic specifically to determine the winner correctly.
+        _room.update { currentRoom ->
+            val r = currentRoom ?: return@update null
+            val finalBoards = _boards.value
+            
+            // This will detect the bot's 5 lines and finish the game
+            gameEngine.processCall(r.copy(calledNumbers = called.dropLast(1)), finalBoards, called.last())
+        }
     }
 
     private fun handleGameEnd() {
         if (difficulty == BotDifficulty.TEE_HEE) {
             _boards.update { boards ->
                 val botBoard = boards[player2Id] ?: return@update boards
-                val currentNumbers = botBoard.numbers.filterNotNull().toSet()
-                val unplacedNumbers = (1..25).filter { it !in currentNumbers }.shuffled().toMutableList()
+                val room = _room.value ?: return@update boards
                 
-                val finalNumbers = botBoard.numbers.map { 
-                    it ?: unplacedNumbers.removeAt(0)
+                // If board hasn't manifested yet (very early win by player?), do it now
+                if (botBoard.numbers.all { it == null }) {
+                    val called = room.calledNumbers
+                    val uncalled = (1..25).filter { it !in called }.shuffled()
+                    val newBoard = botMoveStrategy.manifestTeeHeeBoard(called, uncalled)
+                    return@update boards + (player2Id to newBoard)
+                }
+
+                val currentPlacedNumbers = botBoard.numbers.filterNotNull().toSet()
+                val calledNumbersSet = room.calledNumbers.toSet()
+                val missingCalls = (calledNumbersSet - currentPlacedNumbers).toMutableList()
+                val uncalledNumbers = (1..25).filter { it !in calledNumbersSet }.shuffled().toMutableList()
+                
+                val finalNumbers = botBoard.numbers.map { existing ->
+                    when {
+                        existing != null -> existing
+                        missingCalls.isNotEmpty() -> missingCalls.removeAt(0)
+                        else -> uncalledNumbers.removeAt(0)
+                    }
                 }
                 boards + (player2Id to BingoBoard(finalNumbers))
             }
@@ -172,7 +198,6 @@ class LocalGameRepository(
         completedLines: List<String>,
         claimWin: Boolean
     ): Result<Unit> {
-        // In local mode, progression is already calculated by the engine in callNumber
         return Result.success(Unit)
     }
 
@@ -205,13 +230,12 @@ class LocalGameRepository(
 
     private suspend fun simulateOpponentMove(room: GameRoom, boards: Map<String, BingoBoard>) {
         kotlinx.coroutines.delay(800) // Thinking time
-        
-        // Fix #5: Re-read fresh state after delay to avoid using stale room/board data
+
         val freshRoom = _room.value ?: return
         val freshBoards = _boards.value
         val p2Board = freshBoards[player2Id] ?: return
         val userBoard = freshBoards[playerId] ?: return
-        
+
         val chosen = botMoveStrategy.chooseNumber(
             botBoard = p2Board,
             userBoard = userBoard,
@@ -220,27 +244,14 @@ class LocalGameRepository(
         )
 
         if (chosen != null) {
-            // Fix for TEE-HEE: Bot must place its own chosen number before calling
-            if (difficulty == BotDifficulty.TEE_HEE) {
-                _boards.update { b ->
-                    val currentBotBoard = b[player2Id] ?: BingoBoard(List(25) { null })
-                    val updatedBotBoard = botMoveStrategy.placeNumber(
-                        botBoard = currentBotBoard,
-                        number = chosen,
-                        calledNumbers = freshRoom.calledNumbers.toSet(),
-                        difficulty = difficulty
-                    )
-                    b + (player2Id to updatedBotBoard)
-                }
-            }
-            
-            // Re-read boards after dynamic placement
             val finalBoards = _boards.value
             val nextRoom = gameEngine.processCall(freshRoom, finalBoards, chosen)
             _room.value = nextRoom
 
             if (nextRoom.status == GameStatus.FINISHED) {
                 handleGameEnd()
+            } else if (difficulty == BotDifficulty.TEE_HEE && nextRoom.calledNumbers.size == 16) {
+                manifestBotBoard(nextRoom, callingPlayerId = player2Id)
             }
         }
     }

@@ -15,7 +15,7 @@ class BotMoveStrategy {
         calledNumbers: Set<Int>,
         difficulty: BotDifficulty
     ): Int? {
-        val strategy = when (difficulty) {
+        val strategy: BotStrategy = when (difficulty) {
             BotDifficulty.EASY -> easyStrategy
             BotDifficulty.HARD -> hardStrategy
             BotDifficulty.TEE_HEE -> teeHeeStrategy
@@ -24,18 +24,9 @@ class BotMoveStrategy {
     }
 
     /**
-     * Specifically for TEE-HEE mode: places a called number onto the bot's dynamic board.
+     * Specifically for TEE-HEE mode: generates a strategic board all at once.
      */
-    fun placeNumber(
-        botBoard: BingoBoard,
-        number: Int,
-        calledNumbers: Set<Int>,
-        difficulty: BotDifficulty
-    ): BingoBoard {
-        return if (difficulty == BotDifficulty.TEE_HEE) {
-            teeHeeStrategy.placeNumber(botBoard, number, calledNumbers)
-        } else {
-            botBoard
-        }
+    fun manifestTeeHeeBoard(calledNumbers: List<Int>, uncalledNumbers: List<Int>): BingoBoard {
+        return teeHeeStrategy.manifestBoard(calledNumbers, uncalledNumbers)
     }
 }
