@@ -34,9 +34,12 @@ class TeeHeeBotStrategy : BotStrategy {
 
         val candidates = if (safeNumbers.isNotEmpty()) safeNumbers else availableNumbers
         
+        // Fix: Shuffle before picking to avoid 1 > 2 > 3 predictable behavior
+        val shuffledCandidates = candidates.shuffled()
+
         // Pick the least helpful number for the user among candidates
-        return candidates.minByOrNull { calculateTacticalScore(it, userBoard, calledNumbers) }
-            ?: candidates.random()
+        return shuffledCandidates.minByOrNull { calculateTacticalScore(it, userBoard, calledNumbers) }
+            ?: shuffledCandidates.random()
     }
 
     /**
