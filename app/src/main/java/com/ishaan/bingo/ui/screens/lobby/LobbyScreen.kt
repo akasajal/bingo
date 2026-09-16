@@ -53,8 +53,7 @@ fun LobbyScreen(
                     Button(
                         onClick = {
                             showDifficultyPopup = false
-                            val roomId = viewModel.playWithBot(BotDifficulty.EASY)
-                            onGameJoined(roomId, true)
+                            viewModel.playWithBot(BotDifficulty.EASY)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -63,8 +62,7 @@ fun LobbyScreen(
                     Button(
                         onClick = {
                             showDifficultyPopup = false
-                            val roomId = viewModel.playWithBot(BotDifficulty.HARD)
-                            onGameJoined(roomId, true)
+                            viewModel.playWithBot(BotDifficulty.HARD)
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -73,8 +71,7 @@ fun LobbyScreen(
                     Button(
                         onClick = {
                             showDifficultyPopup = false
-                            val roomId = viewModel.playWithBot(BotDifficulty.TEE_HEE)
-                            onGameJoined(roomId, true)
+                            viewModel.playWithBot(BotDifficulty.TEE_HEE)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
@@ -203,7 +200,7 @@ fun LobbyScreen(
 
             OutlinedTextField(
                 value = joinCode,
-                onValueChange = { 
+                onValueChange = {
                     joinCode = it.uppercase()
                     viewModel.onCodeInputChanged(joinCode)
                 },

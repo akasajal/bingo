@@ -83,13 +83,14 @@ class LobbyViewModel(
             // Optimistic navigation: If we've pre-warmed, assume the join will work.
             // This masks the Firestore transaction time.
             _uiState.update { it.copy(isLoading = true, error = null) }
-            
+
             repository.joinRoom(code).onSuccess { room ->
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         joinedRoomId = room.id,
-                        shouldNavigateToSetup = true
+                        shouldNavigateToSetup = true,
+                        isBotGame = false
                     )
                 }
                 if (room.status != GameStatus.BOARD_SETUP) observeRoomForCreator(room.id)
@@ -108,7 +109,7 @@ class LobbyViewModel(
         }
     }
 
-    fun playWithBot(difficulty: BotDifficulty): String {
+    fun playWithBot(difficulty: BotDifficulty) {
         roomObserverJob?.cancel()
         roomObserverJob = null
 
@@ -119,12 +120,11 @@ class LobbyViewModel(
             it.copy(
                 isLoading = false,
                 joinedRoomId = draft.id,
-                shouldNavigateToSetup = false,
-                isBotGame = true
+                shouldNavigateToSetup = true,
+                isBotGame = true,
+                error = null
             )
         }
-
-        return draft.id
     }
 
     private fun observeRoomForCreator(roomId: String) {
